@@ -77,6 +77,22 @@ _CLAUDELOOP_OVERLAY = (
     "infrastructure/agent/capability_overlay.py)"
 )
 
+# What a local BUILD run (gptossloop, qwenloop) is given comes from the same locked snapshot,
+# taken as the vibey bundle (SP-LOOPS Phase 5, R3, R10): BUILD starts the run with `run
+# --capabilities PATH` (`capabilities_flag` below; qwenloop cli/app.py). No real local model or MCP
+# server has run one yet, so each claim that rests on it ends with the same caveat; drop it in the
+# change that records the operator's real-run probe.
+_LOCAL_SNAPSHOT = (
+    "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document "
+    "(qwenloop cli/app.py)"
+)
+_LOCAL_PROBE = "unit-proven; real-run probe pending"
+_LOCAL_SKILL_TOOLS = (
+    "`skills_list` and `skill_read` page them from a `SkillShelf` "
+    "(vibey_runners.common.capabilities.skill_shelf) within `[loops] capability_answer_tokens` "
+    "per answer, never cut (qwenloop infrastructure/tools.py)"
+)
+
 # claudeloop's own vocabulary, shared by claudeloop-local: the same binary.
 _CLAUDELOOP_AFFORDANCES = EngineAffordances(
     files=True,
@@ -340,14 +356,18 @@ QWENLOOP = EngineDescriptor(
     context_window=32_768,
     base_weight=1,
     tier=EngineTier.LOCAL,
+    # `run --capabilities PATH` (qwenloop cli/app.py): the run's locked snapshot document, which
+    # BUILD writes before the session starts; a refused one exits 78 (SP-LOOPS Phase 5, R3).
+    capabilities_flag="--capabilities",
     affordances=EngineAffordances(
         images=False,
         files=True,
         paste_text=True,
         paste_images=False,
-        plugins=PluginSystem.SKILLS_CONTEXT,
+        plugins=PluginSystem.VIBEY_BUNDLE,
         mcp=True,
-        skills=False,
+        skills=True,
+        # Stays until SP-LOOPS Phase 6 gives every loop `vibey_search`.
         web_search=True,
         evidence={
             "images": "its model-facing tools are read_file, write_file, edit_file, shell, "
@@ -358,17 +378,30 @@ QWENLOOP = EngineDescriptor(
             "paste_text": "the plan is text, and is the first message it sends",
             "paste_images": "every message it sends is text (`ChatMessage.content: str`, "
             "qwenloop domain/model.py)",
-            "plugins": _SKILLS_CONTEXT,
-            "mcp": "`mcp_list` and `mcp_call` are among its model-facing tools and reach the stdio "
-            "servers the operator declared in ~/.claude.json and QWENLOOP_MCP_CONFIG, never the "
-            "worktree's, which the model and a checked-out repository can write; two gateway "
-            "tools rather than every server's tools so a small context is not flooded (qwenloop "
-            "infrastructure/mcp.py, infrastructure/tools.py)",
-            "skills": "its `skill` and `plugin` commands only echo (qwenloop cli/app.py); vibey's context "
-            "packets reach it as plan text (see `plugins`), not as skills it loads",
+            "plugins": f"{_LOCAL_SNAPSHOT}, taken as the vibey bundle: its skills and its "
+            "plugin commands (`commands/*.md`) as text the model retrieves, where "
+            f"{_LOCAL_SKILL_TOOLS}, and its MCP servers (see `mcp`); no plugin hooks or agents. "
+            f"The skills-context packet still reaches the plan: {_SKILLS_CONTEXT}; "
+            f"{_LOCAL_PROBE}",
+            "mcp": f"{_LOCAL_SNAPSHOT}; `mcp_list` and `mcp_call` reach exactly the snapshot's "
+            "servers through an `McpSessionPool`, one session per server for the run, closed "
+            "when it ends: a local server over `StdioTransport` through the scrubbed launcher, "
+            "a remote one over `HttpTransport` (vibey_runners.common.mcp); one tool's input "
+            "schema is fetched when asked for, and each answer is held to `[loops] "
+            "capability_answer_tokens`. Without a snapshot they reach the stdio servers the "
+            "operator declared in ~/.claude.json and QWENLOOP_MCP_CONFIG; never the worktree's "
+            "`.mcp.json`, which the model and a checked-out repository can write (qwenloop "
+            f"infrastructure/mcp.py, infrastructure/tools.py); {_LOCAL_PROBE}",
+            "skills": f"{_LOCAL_SNAPSHOT}; its system prompt lists the snapshot's skills by name "
+            "and description, falling back to names and then to a count, and says so, within "
+            "`[loops] capability_prompt_tokens` (vibey_runners.common.capabilities."
+            "capability_listing), and "
+            f"{_LOCAL_SKILL_TOOLS}; {_LOCAL_PROBE}",
             "web_search": "`web_search` and `web_fetch` are among its model-facing tools and "
             "run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py "
-            "`CODING_TOOL_NAMES`; infrastructure/tools.py)",
+            "`CODING_TOOL_NAMES`; infrastructure/tools.py). `[loops] builtin_web` does not change "
+            "them: that key governs Claude Code's own web tools, which this runner does not have, "
+            "and qwenloop does not read it",
         },
     ),
     # Each takes the run id positionally, then `prompt` its text, and `--cwd` (qwenloop

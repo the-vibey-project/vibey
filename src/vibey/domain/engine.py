@@ -131,6 +131,15 @@ class PluginSystem(StrEnum):
     """vibey-skills context packets: text vibey writes into the plan, so any loop takes them."""
     CLAUDE_PLUGINS = "claude-plugins"
     """Claude Code's own plugin system, where a loop runs it."""
+    VIBEY_BUNDLE = "vibey-bundle"
+    """The person's locked capability snapshot as a loop that cannot run Claude Code's plugins
+    takes it: its skills and plugin commands as text the loop retrieves, and its MCP servers; no
+    hooks, no agents (design Decision 8; ADR-0092, as amended)."""
+
+
+_PLUGIN_GRANTS: Final = frozenset({PluginSystem.CLAUDE_PLUGINS, PluginSystem.VIBEY_BUNDLE})
+"""The plugin systems that grant a lane plugins: Claude's own, or vibey's bundle. A context
+packet in the plan (`SKILLS_CONTEXT`) does not."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,8 +164,9 @@ class EngineAffordances:
     evidence: Mapping[str, str] = field(default_factory=dict)
 
     def full_access_gaps(self) -> tuple[str, ...]:
-        """What a lane on this engine is not shown to have: every skill, Claude's own plugins,
-        every MCP server, and web search with the research tools beside it (#1666).
+        """What a lane on this engine is not shown to have: every skill, plugins (Claude's own
+        plugins or vibey's bundle), every MCP server, and web search with the research tools
+        beside it (#1666).
 
         Every lane is meant to have all four. Unknown is a gap, not a grant -- a capability
         nothing in the tree shows is not one to assume -- so the answer is only ever shorter
@@ -165,7 +175,7 @@ class EngineAffordances:
         gaps: list[str] = []
         if self.skills is not True:
             gaps.append("skills")
-        if self.plugins is not PluginSystem.CLAUDE_PLUGINS:
+        if self.plugins not in _PLUGIN_GRANTS:
             gaps.append("plugins")
         if self.mcp is not True:
             gaps.append("mcp")

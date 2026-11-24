@@ -122,7 +122,8 @@ class EngineAffordancesInterface(Protocol):
     def evidence(self) -> Mapping[str, str]: ...
 
     def full_access_gaps(self) -> tuple[str, ...]:
-        """The capabilities of skills, plugins, MCP and web search not shown to be granted."""
+        """The capabilities of skills, plugins (Claude's own plugins or vibey's bundle), MCP
+        and web search not shown to be granted."""
         ...
 
 

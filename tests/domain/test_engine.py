@@ -205,10 +205,38 @@ def test_a_descriptor_declares_nothing_it_has_not_shown() -> None:
     assert (controls.stop, controls.wind_down, controls.prompt) == (None, None, None)
 
 
-def test_the_plugin_systems_and_event_envelopes_are_named_as_the_contract_names_them() -> None:
-    from vibey.domain.engine import EventEnvelope, PluginSystem
+def test_plugin_systems_are_skills_context_claude_plugins_and_vibey_bundle() -> None:
+    """SP-LOOPS Phase 5 (design Decision 8): a loop that cannot run Claude Code's own plugins
+    takes the person's locked snapshot as the vibey bundle."""
+    from vibey.domain.engine import PluginSystem
 
-    assert [system.value for system in PluginSystem] == ["skills-context", "claude-plugins"]
+    assert [system.value for system in PluginSystem] == [
+        "skills-context",
+        "claude-plugins",
+        "vibey-bundle",
+    ]
+    assert PluginSystem.VIBEY_BUNDLE.value == "vibey-bundle"
+
+
+def test_vibey_bundle_grants_plugins_and_skills_context_does_not() -> None:
+    """Claude's own plugins or vibey's bundle grant plugins; a context packet in the plan does
+    not, and neither does an unknown."""
+    from vibey.domain.engine import EngineAffordances, PluginSystem
+
+    def gaps(plugins: PluginSystem | None) -> tuple[str, ...]:
+        return EngineAffordances(
+            skills=True, plugins=plugins, mcp=True, web_search=True
+        ).full_access_gaps()
+
+    assert gaps(PluginSystem.VIBEY_BUNDLE) == ()
+    assert gaps(PluginSystem.CLAUDE_PLUGINS) == ()
+    assert gaps(PluginSystem.SKILLS_CONTEXT) == ("plugins",)
+    assert gaps(None) == ("plugins",)
+
+
+def test_the_event_envelopes_are_named_as_the_contract_names_them() -> None:
+    from vibey.domain.engine import EventEnvelope
+
     assert [envelope.value for envelope in EventEnvelope] == [
         "type",
         "event_type+payload",

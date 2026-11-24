@@ -374,7 +374,7 @@ def test_a_new_run_carries_the_document_right_after_the_launch_flags(engine: str
     )
 
 
-@pytest.mark.parametrize("engine", ["codexloop", "gptossloop", "qwenloop"])
+@pytest.mark.parametrize("engine", ["codexloop"])
 def test_a_document_on_a_descriptor_without_the_flag_is_refused(engine: str) -> None:
     descriptor = next(d for d in ALL_DESCRIPTORS if d.engine_id.value == engine)
     assert descriptor.capabilities_flag is None
@@ -382,7 +382,47 @@ def test_a_document_on_a_descriptor_without_the_flag_is_refused(engine: str) -> 
         build_argv(descriptor, _with_document())
 
 
-@pytest.mark.parametrize("engine", ["claudeloop", "codexloop"])
+LOCAL_ENGINES = ("gptossloop", "qwenloop")
+
+
+def _local_run_params(argv: tuple[str, ...]) -> dict[str, object]:
+    """`argv` read by the local runner's own `run` command, as click would parse it. One
+    package serves both binaries (ADR-0064), so one Typer app reads both."""
+    import typer
+    from qwenloop.cli.app import app
+
+    run = typer.main.get_command(app).commands["run"]  # type: ignore[attr-defined]
+    assert argv[0] in LOCAL_ENGINES and argv[1] == "run"
+    context = run.make_context("run", list(argv[2:]), resilient_parsing=True)
+    return dict(context.params)
+
+
+@pytest.mark.parametrize("engine", LOCAL_ENGINES)
+def test_the_local_runners_argv_carries_the_document_on_a_new_session_only(engine: str) -> None:
+    """SP-LOOPS Phase 5, R3: a new local run is handed its snapshot by `run --capabilities PATH`,
+    right after the launch flags, and the runner's own `run` reads it there; a resumed session
+    keeps what its run directory holds and is never handed one."""
+    from dataclasses import replace
+
+    descriptor = next(d for d in ALL_DESCRIPTORS if d.engine_id.value == engine)
+    assert descriptor.capabilities_flag == "--capabilities"
+    argv = build_argv(descriptor, _with_document())
+    without = build_argv(descriptor, replace(_with_document(), capabilities_file=None))
+    after_flags = without.index("--run-id") + 2 + len(descriptor.launch_flags)
+    assert argv == (
+        *without[:after_flags],
+        "--capabilities",
+        str(DOCUMENT),
+        *without[after_flags:],
+    )
+    assert str(_local_run_params(argv)["capabilities"]) == str(DOCUMENT)
+    assert _local_run_params(without)["capabilities"] is None
+
+    resumed = build_argv(descriptor, _with_document(session_id="sess-abc123"))
+    assert "--capabilities" not in resumed and str(DOCUMENT) not in resumed
+
+
+@pytest.mark.parametrize("engine", ["claudeloop", "codexloop", *LOCAL_ENGINES])
 def test_a_resumed_session_never_carries_the_document(engine: str) -> None:
     descriptor = next(d for d in ALL_DESCRIPTORS if d.engine_id.value == engine)
     argv = build_argv(descriptor, _with_document(session_id="sess-abc123"))

@@ -230,7 +230,7 @@ def test_qwenloop_reads_as_the_contract_shows_it() -> None:
     assert (qwenloop["cost_per_mtok_in"], qwenloop["cost_per_mtok_out"]) == (0.0, 0.0)
     assert qwenloop["default_model"] is None
     assert qwenloop["capabilities"]["images"] is False
-    assert qwenloop["capabilities"]["plugins"] == "skills-context"
+    assert qwenloop["capabilities"]["plugins"] == "vibey-bundle"
     assert "read_file" in qwenloop["capabilities"]["evidence"]["images"]
     assert qwenloop["controls"] == {
         "stop": ["stop", "{run_id}", "--cwd", "{cwd}"],
@@ -289,10 +289,29 @@ def test_every_capability_a_descriptor_holds_is_in_the_document() -> None:
     assert "builtin_web" in claudeloop["evidence"]["web_search"]
     assert "--capabilities" in claudeloop["evidence"]["files"]
     assert _engine(document, "claudeloop-local")["capabilities"]["web_search"] is False
-    assert _engine(document, "gptossloop")["capabilities"]["skills"] is False
+    assert _engine(document, "gptossloop")["capabilities"]["skills"] is True
     assert (codexloop["mcp"], codexloop["skills"], codexloop["web_search"]) == (None, None, None)
     assert codexloop["evidence"]["mcp"].startswith("unknown: ")
     assert "skills" not in codexloop["evidence"]
+
+
+@pytest.mark.parametrize("engine_id", ["gptossloop", "qwenloop"])
+def test_vibey_loops_reports_vibey_bundle_for_the_local_runner(engine_id: str) -> None:
+    """SP-LOOPS Phase 5: the local runner takes the person's snapshot as the vibey bundle, so
+    `vibey loops` reports its plugins, skills and MCP as granted, each with evidence that says
+    the real-run probe is still pending."""
+    capabilities = _engine(_document(), engine_id)["capabilities"]
+
+    assert capabilities["plugins"] == "vibey-bundle"
+    assert (capabilities["skills"], capabilities["mcp"], capabilities["web_search"]) == (
+        True,
+        True,
+        True,
+    )
+    for affordance in ("plugins", "skills", "mcp"):
+        evidence = capabilities["evidence"][affordance]
+        assert "--capabilities" in evidence, affordance
+        assert evidence.endswith("unit-proven; real-run probe pending"), affordance
 
 
 def test_only_a_runner_that_acts_on_a_mid_run_prompt_offers_a_prompt_control() -> None:
@@ -457,8 +476,8 @@ def test_the_table_says_what_each_effort_passes_and_how_to_switch_a_local_engine
         "images, paste_images, mcp, skills, web_search"
     ) in lines
     assert (
-        "  gptossloop capabilities: yes files, paste_text, plugins (skills-context), mcp, "
-        "web_search; no images, paste_images, skills"
+        "  gptossloop capabilities: yes files, paste_text, plugins (vibey-bundle), mcp, skills, "
+        "web_search; no images, paste_images"
     ) in lines
     assert [line for line in lines if line.startswith("  note on ")] == [
         f"  note on qwenloop: {RENAMED_ENGINES[EngineId.QWENLOOP]}"

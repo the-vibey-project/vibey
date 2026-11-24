@@ -114,19 +114,19 @@
             "files": true,
             "paste_text": true,
             "paste_images": false,
-            "plugins": "skills-context",
+            "plugins": "vibey-bundle",
             "mcp": true,
-            "skills": false,
+            "skills": true,
             "web_search": true,
             "evidence": {
               "images": "its model-facing tools are read_file, write_file, edit_file, shell, search, find and open_file (qwenloop domain/model.py `CODING_TOOL_NAMES`), and every message it sends is text (`ChatMessage.content: str`, same module)",
               "files": "its file tools read and write paths inside the worktree (qwenloop infrastructure/tools.py)",
               "paste_text": "the plan is text, and is the first message it sends",
               "paste_images": "every message it sends is text (`ChatMessage.content: str`, qwenloop domain/model.py)",
-              "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it",
-              "mcp": "`mcp_list` and `mcp_call` are among its model-facing tools and reach the stdio servers the operator declared in ~/.claude.json and QWENLOOP_MCP_CONFIG, never the worktree's, which the model and a checked-out repository can write; two gateway tools rather than every server's tools so a small context is not flooded (qwenloop infrastructure/mcp.py, infrastructure/tools.py)",
-              "skills": "its `skill` and `plugin` commands only echo (qwenloop cli/app.py); vibey's context packets reach it as plan text (see `plugins`), not as skills it loads",
-              "web_search": "`web_search` and `web_fetch` are among its model-facing tools and run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py `CODING_TOOL_NAMES`; infrastructure/tools.py)"
+              "plugins": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (qwenloop cli/app.py), taken as the vibey bundle: its skills and its plugin commands (`commands/*.md`) as text the model retrieves, where `skills_list` and `skill_read` page them from a `SkillShelf` (vibey_runners.common.capabilities.skill_shelf) within `[loops] capability_answer_tokens` per answer, never cut (qwenloop infrastructure/tools.py), and its MCP servers (see `mcp`); no plugin hooks or agents. The skills-context packet still reaches the plan: when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it; unit-proven; real-run probe pending",
+              "mcp": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (qwenloop cli/app.py); `mcp_list` and `mcp_call` reach exactly the snapshot's servers through an `McpSessionPool`, one session per server for the run, closed when it ends: a local server over `StdioTransport` through the scrubbed launcher, a remote one over `HttpTransport` (vibey_runners.common.mcp); one tool's input schema is fetched when asked for, and each answer is held to `[loops] capability_answer_tokens`. Without a snapshot they reach the stdio servers the operator declared in ~/.claude.json and QWENLOOP_MCP_CONFIG; never the worktree's `.mcp.json`, which the model and a checked-out repository can write (qwenloop infrastructure/mcp.py, infrastructure/tools.py); unit-proven; real-run probe pending",
+              "skills": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (qwenloop cli/app.py); its system prompt lists the snapshot's skills by name and description, falling back to names and then to a count, and says so, within `[loops] capability_prompt_tokens` (vibey_runners.common.capabilities.capability_listing), and `skills_list` and `skill_read` page them from a `SkillShelf` (vibey_runners.common.capabilities.skill_shelf) within `[loops] capability_answer_tokens` per answer, never cut (qwenloop infrastructure/tools.py); unit-proven; real-run probe pending",
+              "web_search": "`web_search` and `web_fetch` are among its model-facing tools and run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py `CODING_TOOL_NAMES`; infrastructure/tools.py). `[loops] builtin_web` does not change them: that key governs Claude Code's own web tools, which this runner does not have, and qwenloop does not read it"
             }
           },
           "done_marker": "QWENLOOP_TASK_FULLY_COMPLETE",
@@ -251,19 +251,19 @@
             "files": true,
             "paste_text": true,
             "paste_images": false,
-            "plugins": "skills-context",
+            "plugins": "vibey-bundle",
             "mcp": true,
-            "skills": false,
+            "skills": true,
             "web_search": true,
             "evidence": {
               "images": "its model-facing tools are read_file, write_file, edit_file, shell, search, find and open_file (qwenloop domain/model.py `CODING_TOOL_NAMES`), and every message it sends is text (`ChatMessage.content: str`, same module)",
               "files": "its file tools read and write paths inside the worktree (qwenloop infrastructure/tools.py)",
               "paste_text": "the plan is text, and is the first message it sends",
               "paste_images": "every message it sends is text (`ChatMessage.content: str`, qwenloop domain/model.py)",
-              "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it",
-              "mcp": "`mcp_list` and `mcp_call` are among its model-facing tools and reach the stdio servers the operator declared in ~/.claude.json and QWENLOOP_MCP_CONFIG, never the worktree's, which the model and a checked-out repository can write; two gateway tools rather than every server's tools so a small context is not flooded (qwenloop infrastructure/mcp.py, infrastructure/tools.py)",
-              "skills": "its `skill` and `plugin` commands only echo (qwenloop cli/app.py); vibey's context packets reach it as plan text (see `plugins`), not as skills it loads",
-              "web_search": "`web_search` and `web_fetch` are among its model-facing tools and run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py `CODING_TOOL_NAMES`; infrastructure/tools.py)"
+              "plugins": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (qwenloop cli/app.py), taken as the vibey bundle: its skills and its plugin commands (`commands/*.md`) as text the model retrieves, where `skills_list` and `skill_read` page them from a `SkillShelf` (vibey_runners.common.capabilities.skill_shelf) within `[loops] capability_answer_tokens` per answer, never cut (qwenloop infrastructure/tools.py), and its MCP servers (see `mcp`); no plugin hooks or agents. The skills-context packet still reaches the plan: when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it; unit-proven; real-run probe pending",
+              "mcp": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (qwenloop cli/app.py); `mcp_list` and `mcp_call` reach exactly the snapshot's servers through an `McpSessionPool`, one session per server for the run, closed when it ends: a local server over `StdioTransport` through the scrubbed launcher, a remote one over `HttpTransport` (vibey_runners.common.mcp); one tool's input schema is fetched when asked for, and each answer is held to `[loops] capability_answer_tokens`. Without a snapshot they reach the stdio servers the operator declared in ~/.claude.json and QWENLOOP_MCP_CONFIG; never the worktree's `.mcp.json`, which the model and a checked-out repository can write (qwenloop infrastructure/mcp.py, infrastructure/tools.py); unit-proven; real-run probe pending",
+              "skills": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (qwenloop cli/app.py); its system prompt lists the snapshot's skills by name and description, falling back to names and then to a count, and says so, within `[loops] capability_prompt_tokens` (vibey_runners.common.capabilities.capability_listing), and `skills_list` and `skill_read` page them from a `SkillShelf` (vibey_runners.common.capabilities.skill_shelf) within `[loops] capability_answer_tokens` per answer, never cut (qwenloop infrastructure/tools.py); unit-proven; real-run probe pending",
+              "web_search": "`web_search` and `web_fetch` are among its model-facing tools and run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py `CODING_TOOL_NAMES`; infrastructure/tools.py). `[loops] builtin_web` does not change them: that key governs Claude Code's own web tools, which this runner does not have, and qwenloop does not read it"
             }
           },
           "done_marker": "QWENLOOP_TASK_FULLY_COMPLETE",

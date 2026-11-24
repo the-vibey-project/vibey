@@ -8,7 +8,12 @@ from vibey.application.conformance import run_conformance
 from vibey.domain.capacity import CreditsExhausted
 from vibey.domain.engine import EngineId
 from vibey.infrastructure.engines.classify import CREDITS_FIXTURES
-from vibey.infrastructure.engines.descriptors import ALL_DESCRIPTORS, CLAUDELOOP
+from vibey.infrastructure.engines.descriptors import (
+    ALL_DESCRIPTORS,
+    CLAUDELOOP,
+    GPTOSSLOOP,
+    QWENLOOP,
+)
 from vibey.infrastructure.engines.scripted import ScriptedEngine
 
 
@@ -149,22 +154,26 @@ async def test_a_plan_flag_is_a_claimed_flag_the_help_must_show(tmp_path: Path) 
     assert "--plan" in flags.detail
 
 
-async def test_capabilities_flag_is_checked_against_help(tmp_path: Path) -> None:
-    """The flag a runner takes its capability document by (SP-LOOPS Phase 4, R1) is a claimed
-    flag: a runner whose `run --help` lacks it fails the check naming it, before any BUILD run
-    hands it a document it would refuse at argument parsing."""
+@pytest.mark.parametrize(
+    "descriptor", [CLAUDELOOP, GPTOSSLOOP, QWENLOOP], ids=lambda d: d.engine_id.value
+)
+async def test_capabilities_flag_is_checked_against_help(descriptor, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
+    """The flag a runner takes its capability document by (SP-LOOPS Phase 4, R1; Phase 5, R3
+    and R16 for the local runner) is a claimed flag: a runner whose `run --help` lacks it fails
+    the check naming it, before any BUILD run hands it a document it would refuse at argument
+    parsing."""
     from dataclasses import replace
 
-    assert CLAUDELOOP.capabilities_flag == "--capabilities"
+    assert descriptor.capabilities_flag == "--capabilities"
 
-    shown = await run_conformance(ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "a"))
+    shown = await run_conformance(ScriptedEngine(descriptor=descriptor, base_dir=tmp_path / "a"))
     assert next(c for c in shown.checks if c.name == "flags").ok is True
 
     unflagged = ScriptedEngine(
-        descriptor=replace(CLAUDELOOP, capabilities_flag=None), base_dir=tmp_path / "b"
+        descriptor=replace(descriptor, capabilities_flag=None), base_dir=tmp_path / "b"
     )
     without = ScriptedEngine(
-        descriptor=CLAUDELOOP, base_dir=tmp_path / "c", help_text=unflagged.help_text
+        descriptor=descriptor, base_dir=tmp_path / "c", help_text=unflagged.help_text
     )
     flags = next(c for c in (await run_conformance(without)).checks if c.name == "flags")
     assert flags.ok is False

@@ -24,6 +24,7 @@ from vibey.infrastructure.engines.descriptors import (
     BY_ENGINE_ID,
     CLAUDELOOP,
     CODEXLOOP,
+    GPTOSSLOOP,
     QWENLOOP,
 )
 
@@ -343,13 +344,15 @@ def test_the_capabilities_each_runner_shows() -> None:
     }
     claude = (None, True, True, None, PluginSystem.CLAUDE_PLUGINS, True, True)
     context = PluginSystem.SKILLS_CONTEXT
+    bundle = PluginSystem.VIBEY_BUNDLE
     assert shown == {
         # Web search off until Phase 6 gives every loop `vibey_search` (SP-LOOPS Phase 4, R4).
         "claudeloop": (*claude, False),
         # No MCP code in codexloop: unknown, not yes (SP-LOOPS Task 1).
         "codexloop": (None, True, True, None, context, None, None, None),
-        "gptossloop": (False, True, True, False, context, True, False, True),
-        "qwenloop": (False, True, True, False, context, True, False, True),
+        # The local runner takes the snapshot as the vibey bundle (SP-LOOPS Phase 5, Task 9).
+        "gptossloop": (False, True, True, False, bundle, True, True, True),
+        "qwenloop": (False, True, True, False, bundle, True, True, True),
         # The same binary, but a local backend cannot serve web search.
         "claudeloop-local": (*claude, False),
     }
@@ -364,10 +367,63 @@ def test_the_gaps_between_each_lane_and_full_access_are_pinned() -> None:
     assert gaps == {
         "claudeloop": ("web_search",),
         "codexloop": ("skills", "plugins", "mcp", "web_search"),
-        "gptossloop": ("skills", "plugins"),
-        "qwenloop": ("skills", "plugins"),
+        "gptossloop": (),
+        "qwenloop": (),
         "claudeloop-local": ("web_search",),
     }
+
+
+@pytest.mark.parametrize(
+    "paid",
+    [d for d in ALL_DESCRIPTORS if d.tier is EngineTier.PAID],
+    ids=lambda d: d.engine_id.value,
+)
+def test_the_sovereign_default_has_every_capability_a_paid_loop_has(paid) -> None:  # type: ignore[no-untyped-def]
+    """The acceptance in data (SP-LOOPS Phase 5): whatever full access a paid loop is shown to
+    have, the sovereign default is shown to have too -- its gaps are a subset of every paid
+    loop's."""
+    sovereign = set(GPTOSSLOOP.affordances.full_access_gaps())
+    assert sovereign <= set(paid.affordances.full_access_gaps()), paid.engine_id.value
+
+
+LOCAL_RUNNER_SNAPSHOT_CITES = {
+    "plugins": ("--capabilities", "skills_list", "skill_read", "SkillShelf", "skills_context"),
+    "skills": (
+        "--capabilities",
+        "skills_list",
+        "skill_read",
+        "SkillShelf",
+        "capability_prompt_tokens",
+        "capability_answer_tokens",
+    ),
+    "mcp": (
+        "--capabilities",
+        "mcp_list",
+        "mcp_call",
+        "McpSessionPool",
+        "StdioTransport",
+        "scrubbed launcher",
+        "HttpTransport",
+        "capability_answer_tokens",
+    ),
+}
+
+
+@pytest.mark.parametrize("affordance", ["plugins", "skills", "mcp"])
+def test_local_runner_snapshot_evidence_says_the_real_run_probe_is_pending(
+    affordance: str,
+) -> None:
+    """SP-LOOPS Phase 5: no real `gptossloop` or MCP server has run a snapshot yet, so what it
+    gives a local run is unit-proven only, and each claim ends saying so. Each also names the
+    code it rests on. Remove the phrase when the operator records the probe."""
+    for descriptor in (GPTOSSLOOP, QWENLOOP):
+        evidence = descriptor.affordances.evidence[affordance]
+        assert evidence.endswith("unit-proven; real-run probe pending"), (
+            descriptor.engine_id,
+            evidence,
+        )
+        for cite in LOCAL_RUNNER_SNAPSHOT_CITES[affordance]:
+            assert cite in evidence, (descriptor.engine_id, affordance, cite)
 
 
 def test_claudeloop_claims_no_web_search_while_builtin_web_is_off_by_default() -> None:
