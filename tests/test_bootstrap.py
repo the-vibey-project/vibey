@@ -21,6 +21,7 @@ from vibey.bootstrap import (
     _independent_review_required,
     build_design_worker,
     build_visual_worker,
+    longest_engine_run_deadline,
     qwenloop_enabled,
 )
 from vibey.domain.config import ConfigError
@@ -508,6 +509,34 @@ def test_an_unusable_deadline_never_switches_the_limit_off() -> None:
         assert _engine_run_deadline(config, environ={}) == timedelta(minutes=240)
     environ = {"VIBEY_ENGINE_MAX_RUN_MINUTES": "0"}
     assert _engine_run_deadline({}, environ=environ) == timedelta(minutes=240)
+
+
+def test_the_longest_engine_run_deadline_is_the_longest_any_project_can_use() -> None:
+    """The worker's start-up sweep must outlast every project's session (SP-LOOPS Phase 4,
+    R10), as the snapshot folder is the person's and every project's runs share it."""
+    from datetime import timedelta
+
+    configs = [{"engines": {"max_run_minutes": 90}}, {"engines": {"max_run_minutes": 2880}}, {}]
+    assert longest_engine_run_deadline(configs, environ={}) == timedelta(minutes=2880)
+
+
+def test_the_longest_engine_run_deadline_never_falls_below_the_default() -> None:
+    """A project with no `[engines]`, or one registered after the worker starts, runs to the
+    default, so a shorter project deadline never shortens the sweep's."""
+    from datetime import timedelta
+
+    configs = [{"engines": {"max_run_minutes": 30}}]
+    assert longest_engine_run_deadline(configs, environ={}) == timedelta(minutes=240)
+    assert longest_engine_run_deadline([], environ={}) == timedelta(minutes=240)
+
+
+def test_the_longest_engine_run_deadline_follows_the_environment_over_every_project() -> None:
+    """`VIBEY_ENGINE_MAX_RUN_MINUTES` beats each project's own key, so it is every session's."""
+    from datetime import timedelta
+
+    environ = {"VIBEY_ENGINE_MAX_RUN_MINUTES": "60"}
+    configs = [{"engines": {"max_run_minutes": 2880}}]
+    assert longest_engine_run_deadline(configs, environ=environ) == timedelta(minutes=60)
 
 
 def test_loops_bundle_settings_read_real_files_through_the_toml_reader(tmp_path: Path) -> None:

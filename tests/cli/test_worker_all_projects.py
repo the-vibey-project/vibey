@@ -6,6 +6,7 @@ import os
 import signal
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, patch
 from uuid import UUID
 
@@ -319,3 +320,35 @@ def test_a_failing_loop_stops_its_siblings_before_the_worker_closes_anything(
 
     assert isinstance(res.exception, RuntimeError), res.output
     assert order == ["sibling cancelled", "notifier closed"]
+
+
+def test_the_worker_sweeps_loop_snapshots_with_every_project_before_it_starts(
+    tmp_path: Path, notifier: AsyncMock
+) -> None:
+    """SP-LOOPS Phase 4, R10 and review finding 2: the start-up sweep reads every registered
+    project, so each project's `[engines] max_run_minutes` can count, and it runs once, before
+    the worker says it started and so before anything is claimed."""
+    import typer
+
+    import vibey.cli.main as main
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            repo = tmp_path / "long"
+            repo.mkdir()
+            config = {"engines": {"max_run_minutes": 2880}}
+            await resources.projects.create("long", repo, max_cycles=1, config=config)
+
+    asyncio.run(seed())
+    seen: list[list[object]] = []
+
+    async def sweep(logger: object, projects: Any) -> None:
+        seen.append([record.config for record in await projects.list_all()])
+        typer.echo("swept loop snapshots")
+
+    with patch.object(main, "_sweep_loop_snapshots", new=sweep):
+        res = runner.invoke(app, ["worker", "--all-projects", "--once"])
+
+    assert res.exit_code == 0, res.output
+    assert seen == [[{"engines": {"max_run_minutes": 2880}}]]
+    assert res.output.index("swept loop snapshots") < res.output.index("worker started")

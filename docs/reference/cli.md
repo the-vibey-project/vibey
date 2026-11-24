@@ -2626,11 +2626,14 @@ Before it claims a job, the worker sweeps the loop run snapshots a crashed worke
 (SP-LOOPS Phase 4): it removes the `run-*` folders in `<your configuration folder>/loops/snapshots/`
 that have had no change for longer than your [`[loops] snapshot_max_age_days`](configuration.md#loops)
 (default 7) or the engine run deadline plus an hour, whichever is longer, so no running session
-loses its snapshot. The sweep runs before any project is known, so its deadline is
-`VIBEY_ENGINE_MAX_RUN_MINUTES`, else 240 minutes, never a project's `[engines] max_run_minutes`. It logs `loop_snapshot_sweep` with the counts, and `loop_snapshot_left` for
+loses its snapshot. Every project's runs share that folder, so the deadline is the longest any
+registered project's sessions can run to: `VIBEY_ENGINE_MAX_RUN_MINUTES` when it is set, else
+the longest of 240 minutes and every project's [`[engines] max_run_minutes`](configuration.md#engines).
+It logs `loop_snapshot_sweep` with the counts, and `loop_snapshot_left` for
 each folder it would not touch (the same rules as
 [`vibey loops snapshots prune`](#vibey-loops-marketplace-plugin-mcp-skills-snapshots)). A sweep
-that cannot run is logged as `loop_snapshot_sweep_refused` and never stops the worker. Each BUILD
+that cannot run, including one whose projects cannot be listed (it then removes nothing), is
+logged as `loop_snapshot_sweep_refused` and never stops the worker. Each BUILD
 run's own snapshot is removed when the run ends, however it ends; a `vibey loops snapshots prune`
 you run by hand with a shorter age can still remove a running session's snapshot. It then prints
 `worker started: project=<name> engines=<list or all> parallelism=<n> provider=<p>`

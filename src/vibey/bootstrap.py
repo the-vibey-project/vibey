@@ -7,7 +7,7 @@ import importlib.metadata
 import os
 import platform
 import sys
-from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Mapping, Sequence
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -641,6 +641,23 @@ def _engine_run_deadline(
         if isinstance(raw, int) and raw > 0:
             return timedelta(minutes=raw)
     return timedelta(minutes=DEFAULT_ENGINE_RUN_MINUTES)
+
+
+def longest_engine_run_deadline(
+    configs: Iterable[Mapping[str, object]], environ: Mapping[str, str] = os.environ
+) -> timedelta:
+    """The longest wall-clock limit any BUILD engine session can run to, across `configs`, the
+    registered projects' stored configs (SP-LOOPS Phase 4, R10).
+
+    The person's snapshot folder is shared by every project's runs, so the worker's start-up
+    sweep must outlast the longest of them. Each config is read by `_engine_run_deadline`, so
+    `VIBEY_ENGINE_MAX_RUN_MINUTES` still beats every project's key. A project with no
+    `[engines]`, or one registered after the sweep, runs to the default, so the default always
+    counts too. No upper bound is applied here: a person who sets a longer deadline gets a
+    longer-lived snapshot. Module-level, as `_engine_run_deadline` is, for the reason given
+    there (ADR-0016's last resort, stated).
+    """
+    return max(_engine_run_deadline(config, environ) for config in (*configs, {}))
 
 
 def _independence_policy(

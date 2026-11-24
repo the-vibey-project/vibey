@@ -1000,7 +1000,7 @@ a capability.
 | `builtin_web` | `false` | Whether a loop keeps its engine's own web tools. `false`: a claudeloop run disallows Claude Code's `WebSearch` and `WebFetch`. `true` leaves them on, except on `claudeloop-local`, whose local backend cannot serve them: there they stay off and the run says so in a notice. |
 | `instruction_files` | `["CLAUDE.md", "AGENTS.md"]` | Plain file names (never paths) a claudeloop run reads from its own working folder only and appends to its system prompt as instruction text, never to the plan. A missing file is skipped; a symlink, a file that is not regular or text that is not UTF-8 is refused, never followed or read. At most 16. |
 | `instruction_max_bytes` | `65536` | The largest instruction file inlined, from 1 to 1048576. A larger one is never cut: the run names it with its size and tells the agent to read it. |
-| `snapshot_max_age_days` | `7` | How long, at least, a run snapshot must have gone unchanged before a starting worker's sweep removes it (at least 1). The sweep always waits at least the engine run deadline plus an hour, whatever this says. |
+| `snapshot_max_age_days` | `7` | How long, at least, a run snapshot must have gone unchanged before a starting worker's sweep removes it (at least 1). The sweep always waits at least the engine run deadline plus an hour, whatever this says: the longest deadline any registered project's sessions can run to (`VIBEY_ENGINE_MAX_RUN_MINUTES`, else the longest of 240 minutes and every project's [`[engines] max_run_minutes`](#engines)). |
 
 Names are letters, digits, `.`, `_` and `-`, starting with a letter or digit, at most 128
 characters. A source or ref may not start with `-`, hold control characters or run past 4096

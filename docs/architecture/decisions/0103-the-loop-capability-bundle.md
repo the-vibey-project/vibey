@@ -128,7 +128,11 @@ the first loops apply the bundle. The status above is unchanged; these are its r
   document it refuses, which the `engine_misconfigured` gate then parks.
 - **R10 (lifetime).** The run's snapshot folder is removed when the run's handler returns or
   raises. A worker sweeps at start, with an age of the larger of
-  `[loops] snapshot_max_age_days` and the engine run deadline plus an hour.
+  `[loops] snapshot_max_age_days` and the engine run deadline plus an hour. The deadline is the
+  longest any registered project's sessions can run to (`VIBEY_ENGINE_MAX_RUN_MINUTES` when set,
+  else the longest of 240 minutes and every project's `[engines] max_run_minutes`), since every
+  project's runs share the person's snapshot folder; a worker that cannot list the projects does
+  not sweep.
 - **R11 (`claudeloop-local`).** The same code path, except that `builtin_web = true` does not turn
   the web tools back on against a local backend; claudeloop says so in a notice.
 - **R12 (merge with flags).** The snapshot and claudeloop's own `--plugin`, `--skill`,
@@ -147,8 +151,6 @@ the command with exit 2 before anything is queued, so the run continues unchange
 
 Still open after Phase 4:
 
-- The worker's start-up sweep runs before any project is known, so it uses
-  `VIBEY_ENGINE_MAX_RUN_MINUTES` or 240 minutes, not a project's `[engines] max_run_minutes`.
 - None of this has run against a real `claude` binary or a real MCP server; the tests use
   recorded and scripted doubles.
 
