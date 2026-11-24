@@ -7,6 +7,8 @@ application/ports.py and its concrete infrastructure implementation."""
 
 from __future__ import annotations
 
+import os
+import sys
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -14,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import click
+from vibey_runners.common.capabilities.scrubbed_exec import LAUNCHER_MODULE
 from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
 
 from claudeloop.application.interfaces import DoctorEnvironment
@@ -23,6 +26,7 @@ from claudeloop.domain.budget import Budget
 from claudeloop.domain.capabilities import AppliedCapabilities
 from claudeloop.domain.control import SlashCommand
 from claudeloop.domain.errors import BackendProfileError
+from claudeloop.domain.mcp_config import McpConfigTranslator
 from claudeloop.domain.permission import parse_user_permission_mode
 from claudeloop.domain.plan import WorkPlan
 from claudeloop.domain.verbosity import LogPlan
@@ -103,7 +107,13 @@ def build_runner(
     applied: AppliedCapabilities | None = None
     if capabilities is not None:
         applier = CapabilitySnapshotApplier(
-            SnapshotDocumentStore(), local_backend=config.backend.is_local
+            SnapshotDocumentStore(),
+            local_backend=config.backend.is_local,
+            # A local MCP server starts through the scrubbed launcher, run by this same
+            # interpreter, so it is always the launcher this install ships (R7).
+            mcp=McpConfigTranslator((sys.executable, "-m", LAUNCHER_MODULE)),
+            environ=os.environ,
+            logger=StructlogAppLogger(component="capabilities"),
         )
         applied = applier.load(capabilities)
         applier.check_flags(

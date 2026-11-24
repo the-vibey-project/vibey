@@ -3,19 +3,30 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
+import logging
+import sys
+from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from claude_agent_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 from click.testing import Result
 from typer.testing import CliRunner
+from vibey_runners.common.capabilities.mcp_server_spec import McpServerSpec
+from vibey_runners.common.capabilities.scrubbed_exec import LAUNCHER_MODULE
 
+from claudeloop import bootstrap
+from claudeloop.bootstrap import RunnerContext
 from claudeloop.cli.app import app
 from claudeloop.cli.commands.run import _parse_connector
 from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
 from claudeloop.infrastructure.agent.gateway import ClaudeAgentGateway
-from claudeloop.infrastructure.capabilities.snapshot_applier import CapabilitySnapshotApplier
+from claudeloop.infrastructure.agent.scripted import ALLOW_TEST_AGENT_ENV, TEST_AGENT_SCRIPT_ENV
+from claudeloop.infrastructure.resources.store import RunResourceStore
 from tests.capability_documents import DIGEST, CapabilityDocumentWriter
 
 runner = CliRunner()
@@ -632,24 +643,43 @@ class TestRunWithCapabilities:
         assert not (repo / ".claudeloop" / "runs").exists()
 
     def test_a_connector_named_like_a_snapshot_server_exits_2(self, tmp_path: Path) -> None:
-        document = CapabilityDocumentWriter(tmp_path).write()
-        applied = AppliedCapabilities(
-            digest=DIGEST,
-            plugin_dirs=(),
-            skills=(),
-            mcp_servers={"docs": {"type": "http", "url": "https://example.invalid/mcp"}},
-            disallowed_tools=CLAUDE_BUILTIN_WEB_TOOLS,
-            add_dirs=(),
-            system_prompt_append="",
-            notices=(),
+        docs = McpServerSpec(
+            name="docs",
+            trust="remote",
+            command=None,
+            url="https://example.invalid/mcp",
+            env_allow=(),
         )
-        with patch.object(CapabilitySnapshotApplier, "load", return_value=applied):
-            result, _, session, _ = self._invoke(
-                tmp_path, document, "--connector", "docs=https://other.invalid"
-            )
+        document = CapabilityDocumentWriter(tmp_path).write(mcp_servers=[docs])
+        result, repo, session, _ = self._invoke(
+            tmp_path, document, "--connector", "docs=https://other.invalid"
+        )
         assert result.exit_code == 2
         assert "'docs'" in result.output
         session.assert_not_called()
+        assert not (repo / ".claudeloop" / "runs").exists()
+
+    def test_the_composition_root_gives_the_gateway_servers_started_through_the_launcher(
+        self, tmp_path: Path
+    ) -> None:
+        files = McpServerSpec(
+            name="files",
+            trust="local",
+            command=("files-server",),
+            url=None,
+            env_allow=("FILES_ROOT",),
+        )
+        document = CapabilityDocumentWriter(tmp_path).write(mcp_servers=[files])
+        result, _, _, _ = self._invoke(tmp_path, document)
+        assert result.exit_code == 0, result.output
+        given = self.gateway.call_args.kwargs["applied"]
+        assert given.mcp_servers == {
+            "files": {
+                "type": "stdio",
+                "command": sys.executable,
+                "args": ["-m", LAUNCHER_MODULE, "--allow", "FILES_ROOT", "--", "files-server"],
+            }
+        }
 
     def test_capabilities_applied_is_in_the_runs_events_with_counts_only(
         self, tmp_path: Path
@@ -740,3 +770,161 @@ class TestRunWithCapabilities:
         assert result.exit_code == 0, result.output
         assert composition.build_runner.call_args.kwargs["capabilities"] is None
         assert not (tmp_path / "events.jsonl").exists()
+
+
+_ALLOWED = "VIBEY_T5_FILES_ROOT"
+_ABSENT = "VIBEY_T5_FILES_ABSENT"
+_ENV_SENTINEL = "SENTINEL-MCP-ENV-VALUE-5501"
+
+
+@pytest.fixture
+def _restored_logging() -> Iterator[None]:
+    """The run configures the process's real logging; give the next test the logging it had."""
+    root = logging.getLogger()
+    handlers, level = list(root.handlers), root.level
+    try:
+        yield
+    finally:
+        root.handlers[:] = handlers
+        root.setLevel(level)
+
+
+@pytest.mark.usefixtures("_restored_logging")
+class TestSnapshotMcpServersInAScriptedRun:
+    """A whole `claudeloop run --capabilities` with the test-only scripted agent and a snapshot
+    that gives one local and one remote MCP server (SP-LOOPS Phase 4, Task 5; R7; Review Focus
+    3). The allowed variable holds a sentinel value in claudeloop's own environment: only its
+    name may ever be written anywhere, and only in claudeloop's own log."""
+
+    def _run(self, tmp_path: Path) -> tuple[Result, Path, Path, RunnerContext, MagicMock]:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        home = tmp_path / "home"
+        home.mkdir()
+        plan = tmp_path / "plan.md"
+        plan.write_text("# Plan\nDo something\n", encoding="utf-8")
+        script = tmp_path / "script.json"
+        script.write_text(
+            json.dumps(
+                {
+                    "probes": [{"signals": {}}],
+                    "turns": [{"verdict": {"complete": True, "summary": "done"}}],
+                }
+            ),
+            encoding="utf-8",
+        )
+        files = McpServerSpec(
+            name="files",
+            trust="local",
+            command=("files-server", "--root", "."),
+            url=None,
+            env_allow=(_ALLOWED, _ABSENT),
+        )
+        docs = McpServerSpec(
+            name="docs",
+            trust="remote",
+            command=None,
+            url="https://docs.example.invalid/mcp",
+            env_allow=(),
+        )
+        document = CapabilityDocumentWriter(tmp_path).write(mcp_servers=[files, docs])
+        log_file = tmp_path / "claudeloop.log"
+        built: list[RunnerContext] = []
+        real_build = bootstrap.build_runner
+
+        def _capture(**kwargs: Any) -> RunnerContext:
+            context = real_build(**kwargs)
+            built.append(context)
+            return context
+
+        with (
+            patch("claudeloop.cli.commands.run.bootstrap.build_runner", side_effect=_capture),
+            patch.object(
+                RunResourceStore,
+                "set_connector",
+                autospec=True,
+                side_effect=RunResourceStore.set_connector,
+            ) as set_connector,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "run",
+                    str(plan),
+                    "--cwd",
+                    str(repo),
+                    "--run-id",
+                    "r1",
+                    "--capabilities",
+                    str(document),
+                    "--log-level",
+                    "DEBUG",
+                    "--log-file",
+                    str(log_file),
+                ],
+                env={
+                    **_ENV,
+                    "HOME": str(home),
+                    ALLOW_TEST_AGENT_ENV: "1",
+                    TEST_AGENT_SCRIPT_ENV: str(script),
+                    _ALLOWED: _ENV_SENTINEL,
+                    _ABSENT: None,
+                },
+            )
+        assert len(built) == 1, result.output
+        return result, repo, log_file, built[0], set_connector
+
+    def test_no_env_value_reaches_argv_events_resources_or_logs(self, tmp_path: Path) -> None:
+        result, repo, log_file, context, set_connector = self._run(tmp_path)
+        assert result.exit_code == 0, result.output
+        assert context.applied is not None
+
+        # 1. The session's options and the child's argv, as the SDK would build them.
+        options = ClaudeAgentGateway(cwd=str(repo), applied=context.applied)._options()
+        servers = json.dumps(options.mcp_servers, sort_keys=True)
+        assert set(json.loads(servers)) == {"files", "docs"}
+        assert _ALLOWED in servers
+        assert _ENV_SENTINEL not in servers
+        command = SubprocessCLITransport(
+            prompt="", options=dataclasses.replace(options, cli_path="/fake/claude")
+        )._build_command()
+        assert "--mcp-config" in command
+        assert not any(_ENV_SENTINEL in token for token in command)
+
+        # 2. The run's events.
+        run_root = repo / ".claudeloop" / "runs" / "r1"
+        events = (run_root / "events.jsonl").read_text(encoding="utf-8")
+        assert "capabilities.applied" in events
+        assert _ENV_SENTINEL not in events
+
+        # 3. Every file the run keeps about its resources.
+        resource_files = [p for p in (run_root / "resources").rglob("*") if p.is_file()]
+        assert resource_files
+        for path in resource_files:
+            assert _ENV_SENTINEL not in path.read_text(encoding="utf-8", errors="replace")
+        assert RunResourceStore(run_root / "resources").snapshot().connectors == {}
+        set_connector.assert_not_called()
+
+        # 4. claudeloop's own log and console: the absent name is said, never a value.
+        log = log_file.read_text(encoding="utf-8")
+        assert "capabilities.mcp_env_absent" in log
+        assert _ABSENT in log
+        assert _ENV_SENTINEL not in log
+        assert _ENV_SENTINEL not in result.output
+
+    def test_a_snapshot_server_is_not_exported_by_claudeloop_snapshot(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        result, repo, _, _, _ = self._run(tmp_path)
+        assert result.exit_code == 0, result.output
+        monkeypatch.chdir(repo)
+        exported = runner.invoke(
+            app, ["snapshot", "--run-id", "r1", "--no-bundle"], env={**_ENV, "HOME": str(tmp_path)}
+        )
+        assert exported.exit_code == 0, exported.output
+        latest = repo / ".claudeloop" / "runs" / "r1" / "snapshots" / "latest.json"
+        text = latest.read_text(encoding="utf-8")
+        assert json.loads(text)["resources"]["connectors"] == {}
+        for leaked in (LAUNCHER_MODULE, "files-server", "docs.example.invalid", _ALLOWED):
+            assert leaked not in text
+        assert _ENV_SENTINEL not in text

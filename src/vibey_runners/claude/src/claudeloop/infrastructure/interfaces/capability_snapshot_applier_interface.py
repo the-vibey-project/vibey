@@ -15,8 +15,11 @@ from claudeloop.domain.interfaces import AppliedCapabilitiesInterface
 @runtime_checkable
 class CapabilitySnapshotApplierInterface(Protocol):
     def load(self, path: Path) -> AppliedCapabilitiesInterface:
-        """What the document at `path` gives the session. Raises `CapabilitySnapshotRefused`,
-        naming only `path`, when the document is refused or cannot be read."""
+        """What the document at `path` gives the session, its MCP servers as SDK configs with
+        an explicit transport (a local one through the scrubbed launcher). An allowed variable
+        name that claudeloop's environment does not set is logged by name, never by value.
+        Raises `CapabilitySnapshotRefused`, naming only `path`, when the document is refused or
+        cannot be read."""
         ...
 
     def check_flags(

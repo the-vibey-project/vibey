@@ -206,6 +206,7 @@ source_modules = ["claudeloop.domain.interfaces"]
 forbidden_modules = [
     "claudeloop.domain.backend",
     "claudeloop.domain.capabilities",
+    "claudeloop.domain.mcp_config",
     "claudeloop.application",
     "claudeloop.infrastructure",
     "claudeloop.cli",

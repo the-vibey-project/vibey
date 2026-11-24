@@ -11,24 +11,33 @@ run` exits 78).
 
 `[loops] builtin_web = false` switches Claude Code's own web tools off (R4). On a local backend
 they are always off, whatever the setting, because a local backend cannot serve them; asking
-for them there is said, never silently honoured (R11). Declared by
+for them there is said, never silently honoured (R11).
+
+The snapshot's MCP servers become SDK configs with an explicit transport (Task 5, R7): a local
+server starts through the scrubbed launcher, which gives it only its `env_allow` names, and a
+remote one is streamable HTTP. They live on the session's record only and are never written to
+the run's resources, so `claudeloop snapshot` never exports them. An allowed name that is not
+set in claudeloop's own environment reaches the server as nothing; that name, and never a value,
+is said in claudeloop's own log. Declared by
 `interfaces/capability_snapshot_applier_interface.py::CapabilitySnapshotApplierInterface`.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Final
 
 from vibey_runners.common.capabilities.interfaces.snapshot_document_store_interface import (
     SnapshotDocumentStoreInterface,
 )
+from vibey_runners.common.capabilities.mcp_server_spec import McpServerSpec
 from vibey_runners.common.capabilities.snapshot_document_error import SnapshotDocumentError
 
+from claudeloop.application.ports import Logger
 from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
 from claudeloop.domain.errors import CapabilityFlagConflict, CapabilitySnapshotRefused
-from claudeloop.domain.interfaces import AppliedCapabilitiesInterface
+from claudeloop.domain.interfaces import AppliedCapabilitiesInterface, McpConfigTranslatorInterface
 
 LOCAL_BACKEND_WEB_NOTICE: Final = (
     "[loops] builtin_web = true is not applied on a local backend: a local backend cannot "
@@ -40,9 +49,21 @@ LOCAL_BACKEND_WEB_NOTICE: Final = (
 class CapabilitySnapshotApplier:
     """Declared by `interfaces/capability_snapshot_applier_interface.py`."""
 
-    def __init__(self, store: SnapshotDocumentStoreInterface, *, local_backend: bool) -> None:
+    def __init__(
+        self,
+        store: SnapshotDocumentStoreInterface,
+        *,
+        local_backend: bool,
+        mcp: McpConfigTranslatorInterface,
+        environ: Mapping[str, str],
+        logger: Logger,
+    ) -> None:
         self._store = store
         self._local_backend = local_backend
+        self._mcp = mcp
+        # Read for which names are set, never for a value: only names are ever logged.
+        self._environ = environ
+        self._logger = logger
 
     def load(self, path: Path) -> AppliedCapabilities:
         try:
@@ -62,12 +83,25 @@ class CapabilitySnapshotApplier:
             digest=document.digest,
             plugin_dirs=tuple(str(folder) for folder in document.plugin_dirs),
             skills=document.skills,
-            mcp_servers={},
+            mcp_servers=self._servers(document.mcp_servers),
             disallowed_tools=CLAUDE_BUILTIN_WEB_TOOLS if web_off else (),
             add_dirs=tuple(str(folder) for folder in document.folders),
             system_prompt_append="",
             notices=notices,
         )
+
+    def _servers(self, servers: Iterable[McpServerSpec]) -> dict[str, dict[str, object]]:
+        """The document's servers as SDK configs, in document order. The reader has already
+        refused a duplicate name and any spec that is neither local nor remote."""
+        configs: dict[str, dict[str, object]] = {}
+        for server in servers:
+            configs[server.name] = self._mcp.translate(server)
+            absent = [name for name in server.env_allow if name not in self._environ]
+            if absent:
+                self._logger.warning(
+                    "capabilities.mcp_env_absent", server=server.name, names=absent
+                )
+        return configs
 
     def check_flags(
         self,

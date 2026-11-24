@@ -16,6 +16,9 @@ from claudeloop.domain.interfaces.class_contracts import (
     CapabilitySnapshotRefusedInterface,
     TurnSignalsInterface,
 )
+from claudeloop.domain.interfaces.mcp_config_translator_interface import (
+    McpConfigTranslatorInterface,
+)
 
 __all__ = [
     "AppliedCapabilitiesInterface",
@@ -25,5 +28,6 @@ __all__ = [
     "BackendProfileErrorInterface",
     "BackendRuntimeInterface",
     "CapabilitySnapshotRefusedInterface",
+    "McpConfigTranslatorInterface",
     "TurnSignalsInterface",
 ]

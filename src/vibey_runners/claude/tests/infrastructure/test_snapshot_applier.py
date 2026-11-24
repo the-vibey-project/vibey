@@ -6,25 +6,84 @@ R12; Review Focus 5)."""
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 import pytest
 from vibey_runners.common.capabilities.interfaces.snapshot_document_interface import (
     SnapshotDocumentInterface,
 )
+from vibey_runners.common.capabilities.mcp_server_spec import McpServerSpec
 from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
 
 from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
 from claudeloop.domain.errors import CapabilityFlagConflict, CapabilitySnapshotRefused
+from claudeloop.domain.mcp_config import McpConfigTranslator
 from claudeloop.infrastructure.capabilities.snapshot_applier import CapabilitySnapshotApplier
 from claudeloop.infrastructure.interfaces import CapabilitySnapshotApplierInterface
 from tests.capability_documents import DIGEST, CapabilityDocumentWriter
 
 SENTINEL = "SENTINEL-VALUE-7731"
+LAUNCHER = ("/usr/bin/python3", "-m", "vibey_runners.common.capabilities.scrubbed_exec")
 
 
-def _applier(*, local_backend: bool = False) -> CapabilitySnapshotApplier:
-    return CapabilitySnapshotApplier(SnapshotDocumentStore(), local_backend=local_backend)
+class _RecordingLogger:
+    """An `application.ports.Logger` that keeps every call, so a test can read what was said."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def bind(self, **kwargs: Any) -> _RecordingLogger:
+        del kwargs
+        return self
+
+    def debug(self, event: str, **kwargs: Any) -> None:
+        self.calls.append(("debug", event, kwargs))
+
+    def info(self, event: str, **kwargs: Any) -> None:
+        self.calls.append(("info", event, kwargs))
+
+    def warning(self, event: str, **kwargs: Any) -> None:
+        self.calls.append(("warning", event, kwargs))
+
+    def error(self, event: str, **kwargs: Any) -> None:
+        self.calls.append(("error", event, kwargs))
+
+
+def _applier(
+    *,
+    local_backend: bool = False,
+    environ: Mapping[str, str] | None = None,
+    logger: _RecordingLogger | None = None,
+) -> CapabilitySnapshotApplier:
+    return CapabilitySnapshotApplier(
+        SnapshotDocumentStore(),
+        local_backend=local_backend,
+        mcp=McpConfigTranslator(LAUNCHER),
+        environ=environ if environ is not None else {},
+        logger=logger if logger is not None else _RecordingLogger(),
+    )
+
+
+def _files(*env_allow: str) -> McpServerSpec:
+    return McpServerSpec(
+        name="files",
+        trust="local",
+        command=("files-server", "--root", "."),
+        url=None,
+        env_allow=env_allow,
+    )
+
+
+def _docs() -> McpServerSpec:
+    return McpServerSpec(
+        name="docs",
+        trust="remote",
+        command=None,
+        url="https://docs.example.invalid/mcp",
+        env_allow=(),
+    )
 
 
 def test_the_applier_satisfies_its_interface() -> None:
@@ -105,7 +164,13 @@ class _UnreadableStore:
 
 def test_an_os_error_while_reading_is_refused_without_its_text(tmp_path: Path) -> None:
     path = tmp_path / "capabilities.json"
-    applier = CapabilitySnapshotApplier(_UnreadableStore(), local_backend=False)
+    applier = CapabilitySnapshotApplier(
+        _UnreadableStore(),
+        local_backend=False,
+        mcp=McpConfigTranslator(LAUNCHER),
+        environ={},
+        logger=_RecordingLogger(),
+    )
     with pytest.raises(CapabilitySnapshotRefused) as caught:
         applier.load(path)
     assert str(path) in str(caught.value)
@@ -149,3 +214,53 @@ def test_flags_that_add_to_the_snapshot_are_accepted() -> None:
         notices=(),
     )
     _applier().check_flags(allowed, connectors=[], web_search=True)
+
+
+# -- MCP servers from the snapshot (Task 5; R7) -------------------------------------------------
+
+
+def test_the_snapshots_servers_become_typed_sdk_configs_in_document_order(tmp_path: Path) -> None:
+    path = CapabilityDocumentWriter(tmp_path).write(mcp_servers=[_files("FILES_ROOT"), _docs()])
+    applied = _applier(environ={"FILES_ROOT": SENTINEL}).load(path)
+    assert list(applied.mcp_servers) == ["files", "docs"]
+    assert applied.mcp_servers["files"] == {
+        "type": "stdio",
+        "command": LAUNCHER[0],
+        "args": [*LAUNCHER[1:], "--allow", "FILES_ROOT", "--", "files-server", "--root", "."],
+    }
+    assert applied.mcp_servers["docs"] == {
+        "type": "http",
+        "url": "https://docs.example.invalid/mcp",
+    }
+    assert SENTINEL not in json.dumps(applied.mcp_servers)
+
+
+def test_an_allowed_name_absent_from_claudeloops_environment_is_logged_by_name_only(
+    tmp_path: Path,
+) -> None:
+    path = CapabilityDocumentWriter(tmp_path).write(
+        mcp_servers=[_files("FILES_ROOT", "FILES_HOME", "FILES_MODE"), _docs()]
+    )
+    logger = _RecordingLogger()
+    applier = _applier(environ={"FILES_ROOT": SENTINEL, "UNRELATED": SENTINEL}, logger=logger)
+    applier.load(path)
+    assert logger.calls == [
+        (
+            "warning",
+            "capabilities.mcp_env_absent",
+            {"server": "files", "names": ["FILES_HOME", "FILES_MODE"]},
+        )
+    ]
+    assert SENTINEL not in repr(logger.calls)
+
+
+def test_nothing_is_logged_when_every_allowed_name_is_set(tmp_path: Path) -> None:
+    path = CapabilityDocumentWriter(tmp_path).write(mcp_servers=[_files("FILES_ROOT"), _docs()])
+    logger = _RecordingLogger()
+    _applier(environ={"FILES_ROOT": SENTINEL}, logger=logger).load(path)
+    assert logger.calls == []
+
+
+def test_a_document_without_servers_gives_none(tmp_path: Path) -> None:
+    path = CapabilityDocumentWriter(tmp_path).write()
+    assert _applier().load(path).mcp_servers == {}
