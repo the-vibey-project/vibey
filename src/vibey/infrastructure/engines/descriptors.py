@@ -62,10 +62,12 @@ _SKILLS_CONTEXT = (
 
 # What a claudeloop BUILD run is given comes from its locked capability snapshot (SP-LOOPS
 # Phase 4): BUILD writes the document and starts the run with `run --capabilities PATH`
-# (`capabilities_flag` below; claudeloop cli/commands/run.py).
+# (`capabilities_flag` below; claudeloop cli/commands/run.py). Every claim that rests on it is
+# unit-proven only until the operator's real-run probe against a real `claude` is recorded (the
+# Phase 4 plan's Verification step 5); drop the caveat in the same change that records it.
 _CLAUDELOOP_SNAPSHOT = (
     "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document "
-    "(claudeloop cli/commands/run.py)"
+    "(claudeloop cli/commands/run.py; unit-proven; real-run probe pending)"
 )
 # Applied on every connect, so a mid-run resource change keeps what the snapshot gave
 # (claudeloop infrastructure/agent/capability_overlay.py).

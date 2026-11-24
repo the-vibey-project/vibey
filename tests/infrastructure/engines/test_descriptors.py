@@ -388,6 +388,20 @@ def test_claudeloop_claims_no_web_search_while_builtin_web_is_off_by_default() -
     assert "--web-search" not in CLAUDELOOP.launch_flags
 
 
+@pytest.mark.parametrize("affordance", ["files", "plugins", "mcp", "skills"])
+def test_claudeloops_snapshot_evidence_says_the_real_run_probe_is_pending(
+    affordance: str,
+) -> None:
+    """The plan's Verification step 5 (SP-LOOPS Phase 4): until the operator's real-run probe
+    has run against a real `claude`, what the snapshot gives a run is unit-proven only, and
+    the evidence says so. Remove the phrase when the probe's outcome is recorded."""
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    for descriptor in (CLAUDELOOP, CLAUDELOOP_LOCAL):
+        evidence = descriptor.affordances.evidence[affordance]
+        assert "unit-proven; real-run probe pending" in evidence, (descriptor.engine_id, evidence)
+
+
 @pytest.mark.parametrize("descriptor", ALL_DESCRIPTORS, ids=lambda d: d.engine_id.value)
 def test_every_launch_flag_is_one_the_runners_run_defines(descriptor) -> None:  # type: ignore[no-untyped-def]
     run = _runner_commands(descriptor.engine_id)["run"]
