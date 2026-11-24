@@ -344,7 +344,8 @@ def test_the_capabilities_each_runner_shows() -> None:
     claude = (None, True, True, None, PluginSystem.CLAUDE_PLUGINS, True, True)
     context = PluginSystem.SKILLS_CONTEXT
     assert shown == {
-        "claudeloop": (*claude, True),
+        # Web search off until Phase 6 gives every loop `vibey_search` (SP-LOOPS Phase 4, R4).
+        "claudeloop": (*claude, False),
         # No MCP code in codexloop: unknown, not yes (SP-LOOPS Task 1).
         "codexloop": (None, True, True, None, context, None, None, None),
         "gptossloop": (False, True, True, False, context, True, False, True),
@@ -361,12 +362,30 @@ def test_the_gaps_between_each_lane_and_full_access_are_pinned() -> None:
     entry here is a capability gap to close in the runner, not a fact to accept."""
     gaps = {d.engine_id.value: d.affordances.full_access_gaps() for d in ALL_DESCRIPTORS}
     assert gaps == {
-        "claudeloop": (),
+        "claudeloop": ("web_search",),
         "codexloop": ("skills", "plugins", "mcp", "web_search"),
         "gptossloop": ("skills", "plugins"),
         "qwenloop": ("skills", "plugins"),
         "claudeloop-local": ("web_search",),
     }
+
+
+def test_claudeloop_claims_no_web_search_while_builtin_web_is_off_by_default() -> None:
+    """`[loops] builtin_web` is off unless a person sets it, and then claudeloop disallows
+    Claude Code's own web tools (SP-LOOPS Phase 4, R4). A claim of web search would be a claim
+    the default run does not have; `claudeloop-local` never has them, whatever the key (R11)."""
+    from vibey_runners.common.capabilities.bundle import BundleSpec
+
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    assert BundleSpec.default().builtin_web is False
+    assert BundleSpec.from_mapping({}).builtin_web is False
+    for descriptor in (CLAUDELOOP, CLAUDELOOP_LOCAL):
+        evidence = descriptor.affordances.evidence["web_search"]
+        assert descriptor.affordances.web_search is False, descriptor.engine_id
+        assert "builtin_web" in evidence and "CLAUDE_BUILTIN_WEB_TOOLS" in evidence, evidence
+    assert "R11" in CLAUDELOOP_LOCAL.affordances.evidence["web_search"]
+    assert "--web-search" not in CLAUDELOOP.launch_flags
 
 
 @pytest.mark.parametrize("descriptor", ALL_DESCRIPTORS, ids=lambda d: d.engine_id.value)

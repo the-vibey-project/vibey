@@ -95,8 +95,6 @@ async def test_run_materializes_plan_enforces_caps_and_reads_latest_response(
             str(plan),
             "--run-id",
             "00000000-0000-0000-0000-000000000123",
-            "--web-search",
-            "--deep-research",
             "--preset",
             "medium",
             "--effort",
@@ -110,6 +108,7 @@ async def test_run_materializes_plan_enforces_caps_and_reads_latest_response(
             "--no-auto-model",
             "--max-wait",
             "1",
+            "--web-search",
         )
     ]
     assert result.run_id == run_id
@@ -674,9 +673,10 @@ async def test_an_injected_environment_is_the_one_used(monkeypatch: pytest.Monke
     assert captured["env"] == {"ONLY": "this"}
 
 
-async def test_a_run_not_asked_for_web_search_still_has_it(tmp_path: Path) -> None:
-    """Every lane is given web search (#1666), so a caller that did not ask for it gets it
-    from the engine's descriptor, once."""
+async def test_a_run_not_asked_for_web_search_is_not_given_it(tmp_path: Path) -> None:
+    """The descriptor no longer gives every claudeloop run `--web-search` and
+    `--deep-research` (SP-LOOPS Phase 4, R4), so only a caller that asks for web search, as
+    DESIGN's bounded research does, gets it."""
     run_id = "20260814T120000Z-abcd1234"
     events = tmp_path / ".claudeloop" / "runs" / run_id / "events.jsonl"
     events.parent.mkdir(parents=True)
@@ -688,4 +688,5 @@ async def test_a_run_not_asked_for_web_search_still_has_it(tmp_path: Path) -> No
 
     await process.run(spec(tmp_path))
 
-    assert executor.calls[0].count("--web-search") == 1
+    assert "--web-search" not in executor.calls[0]
+    assert "--deep-research" not in executor.calls[0]

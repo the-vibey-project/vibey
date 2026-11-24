@@ -22,9 +22,14 @@ class RunnerFact:
     needle: str
 
 
-_CLAUDE_RUN = "src/vibey_runners/claude/src/claudeloop/cli/commands/run.py"
-_CLAUDE_PROMPT = "src/vibey_runners/claude/src/claudeloop/cli/commands/prompt.py"
-_CLAUDE_RESOURCES = "src/vibey_runners/claude/src/claudeloop/infrastructure/resources/adapter.py"
+_CLAUDE = "src/vibey_runners/claude/src/claudeloop"
+_CLAUDE_RUN = f"{_CLAUDE}/cli/commands/run.py"
+_CLAUDE_PROMPT = f"{_CLAUDE}/cli/commands/prompt.py"
+_CLAUDE_RESOURCES = f"{_CLAUDE}/infrastructure/resources/adapter.py"
+# SP-LOOPS Phase 4: the overlay that lays the run's snapshot over every connect, and the MCP
+# transports its servers are given.
+_CLAUDE_OVERLAY = f"{_CLAUDE}/infrastructure/agent/capability_overlay.py"
+_CLAUDE_MCP = f"{_CLAUDE}/domain/mcp_config.py"
 _CODEX_ARGV = "src/vibey_runners/codex/src/codexloop/infrastructure/agent/argv.py"
 _CODEX_PROMPT = "src/vibey_runners/codex/src/codexloop/cli/commands/prompt.py"
 _LOCAL_TOOLS = "src/vibey_runners/qwen/src/qwenloop/infrastructure/tools.py"
@@ -36,13 +41,21 @@ _SKILLS_CONTEXT_NEEDLE = 'prompt = f"{prompt.rstrip()}\\n\\n{context.markdown.ls
 
 
 def _claudeloop(loop: str) -> tuple[RunnerFact, ...]:
-    """claudeloop's facts; claudeloop-local is the same binary on a local profile."""
+    """claudeloop's facts; claudeloop-local is the same binary on a local profile and takes the
+    same snapshot (SP-LOOPS Phase 4, R11). Neither claims web search (R4), so neither has a fact
+    for it."""
     return (
-        RunnerFact(loop, "files", _CLAUDE_RUN, '"--add-folder"'),
+        RunnerFact(loop, "files", _CLAUDE_RUN, '"--capabilities"'),
+        RunnerFact(loop, "files", _CLAUDE_RESOURCES, "attachments_dir"),
         RunnerFact(loop, "paste_text", _CLAUDE_PROMPT, '"--at-break"'),
-        RunnerFact(loop, "plugins", _CLAUDE_RUN, '"--plugin"'),
-        RunnerFact(loop, "mcp", _CLAUDE_RUN, '"--connector"'),
-        RunnerFact(loop, "skills", _CLAUDE_RUN, '"--skill"'),
+        RunnerFact(loop, "plugins", _CLAUDE_RUN, '"--capabilities"'),
+        RunnerFact(loop, "plugins", _CLAUDE_OVERLAY, 'merged["setting_sources"] = []'),
+        RunnerFact(loop, "plugins", _CLAUDE_OVERLAY, '{"type": "local", "path": folder}'),
+        RunnerFact(loop, "mcp", _CLAUDE_RUN, '"--capabilities"'),
+        RunnerFact(loop, "mcp", _CLAUDE_MCP, '"type": "stdio"'),
+        RunnerFact(loop, "mcp", _CLAUDE_MCP, '"type": "http"'),
+        RunnerFact(loop, "skills", _CLAUDE_RUN, '"--capabilities"'),
+        RunnerFact(loop, "skills", _CLAUDE_OVERLAY, 'merged["skills"] = self._skills('),
     )
 
 
@@ -59,7 +72,6 @@ def _local_runner(loop: str) -> tuple[RunnerFact, ...]:
 
 RUNNER_FACTS: tuple[RunnerFact, ...] = (
     *_claudeloop("claudeloop"),
-    RunnerFact("claudeloop", "web_search", _CLAUDE_RESOURCES, 'allowed.append("WebSearch")'),
     *_claudeloop("claudeloop-local"),
     RunnerFact("codexloop", "files", _CODEX_ARGV, '"--add-dir"'),
     RunnerFact("codexloop", "paste_text", _CODEX_PROMPT, '"--next-turn"'),

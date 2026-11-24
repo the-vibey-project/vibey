@@ -410,12 +410,12 @@
             "skills": true,
             "web_search": false,
             "evidence": {
-              "files": "it runs in the worktree (`run --cwd`), and `run --add-folder` and `--attach` take more (claudeloop cli/commands/run.py)",
+              "files": "it runs in the worktree (`run --cwd`); a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (claudeloop cli/commands/run.py), whose folders become the session's `add_dirs`; and `--attach` copies reach the agent through the run's attachments folder, which `gateway_payload` adds to `add_dirs` and names in the prompt (claudeloop infrastructure/resources/adapter.py `attachments_dir`)",
               "paste_text": "`prompt TEXT --now|--at-break` (claudeloop cli/commands/prompt.py); the plan itself is text",
-              "plugins": "`run --plugin` becomes the Claude Agent SDK's `plugins` option (claudeloop cli/commands/run.py; infrastructure/agent/options.py); the plugins a user's settings enable load through `setting_sources` (see `mcp`)",
-              "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's `mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py); with none named, `setting_sources` is left unset, which the SDK documents as loading every user, project and local setting, and so the MCP servers they declare",
-              "skills": "`run --skill` becomes the Claude Agent SDK's `skills` option (claudeloop cli/commands/run.py; infrastructure/agent/options.py); with none named it stays unset, which the SDK documents as \"not skills off\" -- the CLI's own defaults load every discovered skill -- and claudeloop's own test pins that nothing narrows it (tests/infrastructure/test_options_and_bus.py)",
-              "web_search": "a local backend cannot serve Anthropic's server-side tools, and claudeloop refuses `--web-search` and `--deep-research` against one (claudeloop domain/backend.py `check_tools`)"
+              "plugins": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (claudeloop cli/commands/run.py); `CapabilityOptionsOverlay` sets `setting_sources=[]` and `strict_mcp_config=True`, so no user, project or local Claude setting loads (claudeloop infrastructure/agent/capability_overlay.py), and each of the snapshot's plugin folders becomes a local `plugins` entry, which Claude Code loads as `--plugin-dir`; `run --plugin` adds to them",
+              "mcp": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (claudeloop cli/commands/run.py); `McpConfigTranslator` types each of its MCP servers: a local one is `\"type\": \"stdio\"`, started through the scrubbed launcher, and a remote one `\"type\": \"http\"`, never `sse` (claudeloop domain/mcp_config.py); `CapabilityOptionsOverlay` sets `setting_sources=[]` and `strict_mcp_config=True`, so no user, project or local Claude setting loads (claudeloop infrastructure/agent/capability_overlay.py); `run --connector` adds to them",
+              "skills": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (claudeloop cli/commands/run.py); `CapabilityOptionsOverlay` enables exactly the catalog's skills by qualified name (`plugin:skill`) as the Claude Agent SDK's `skills` option (claudeloop infrastructure/agent/capability_overlay.py); `run --skill` adds to them",
+              "web_search": "a local backend cannot serve Anthropic's server-side tools, and claudeloop refuses `--web-search` and `--deep-research` against one (claudeloop domain/backend.py `check_tools`); with a snapshot it always disallows `CLAUDE_BUILTIN_WEB_TOOLS`, even when `[loops] builtin_web` is true, and says so in a notice (SP-LOOPS Phase 4, R11; claudeloop infrastructure/capabilities/snapshot_applier.py)"
             }
           },
           "done_marker": "CLAUDELOOP_TASK_FULLY_COMPLETE",
@@ -677,14 +677,14 @@
             "plugins": "claude-plugins",
             "mcp": true,
             "skills": true,
-            "web_search": true,
+            "web_search": false,
             "evidence": {
-              "files": "it runs in the worktree (`run --cwd`), and `run --add-folder` and `--attach` take more (claudeloop cli/commands/run.py)",
+              "files": "it runs in the worktree (`run --cwd`); a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (claudeloop cli/commands/run.py), whose folders become the session's `add_dirs`; and `--attach` copies reach the agent through the run's attachments folder, which `gateway_payload` adds to `add_dirs` and names in the prompt (claudeloop infrastructure/resources/adapter.py `attachments_dir`)",
               "paste_text": "`prompt TEXT --now|--at-break` (claudeloop cli/commands/prompt.py); the plan itself is text",
-              "plugins": "`run --plugin` becomes the Claude Agent SDK's `plugins` option (claudeloop cli/commands/run.py; infrastructure/agent/options.py); the plugins a user's settings enable load through `setting_sources` (see `mcp`)",
-              "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's `mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py); with none named, `setting_sources` is left unset, which the SDK documents as loading every user, project and local setting, and so the MCP servers they declare",
-              "skills": "`run --skill` becomes the Claude Agent SDK's `skills` option (claudeloop cli/commands/run.py; infrastructure/agent/options.py); with none named it stays unset, which the SDK documents as \"not skills off\" -- the CLI's own defaults load every discovered skill -- and claudeloop's own test pins that nothing narrows it (tests/infrastructure/test_options_and_bus.py)",
-              "web_search": "`run --web-search` (\"Enable web search tools\", off unless given) adds the SDK's WebSearch tool to the session (claudeloop cli/commands/run.py; infrastructure/resources/adapter.py `gateway_payload`); vibey always passes it, and `--deep-research` beside it, which claudeloop only records as a flag (infrastructure/resources/store.py) -- no tool or cost follows from it"
+              "plugins": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (claudeloop cli/commands/run.py); `CapabilityOptionsOverlay` sets `setting_sources=[]` and `strict_mcp_config=True`, so no user, project or local Claude setting loads (claudeloop infrastructure/agent/capability_overlay.py), and each of the snapshot's plugin folders becomes a local `plugins` entry, which Claude Code loads as `--plugin-dir`; `run --plugin` adds to them",
+              "mcp": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (claudeloop cli/commands/run.py); `McpConfigTranslator` types each of its MCP servers: a local one is `\"type\": \"stdio\"`, started through the scrubbed launcher, and a remote one `\"type\": \"http\"`, never `sse` (claudeloop domain/mcp_config.py); `CapabilityOptionsOverlay` sets `setting_sources=[]` and `strict_mcp_config=True`, so no user, project or local Claude setting loads (claudeloop infrastructure/agent/capability_overlay.py); `run --connector` adds to them",
+              "skills": "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document (claudeloop cli/commands/run.py); `CapabilityOptionsOverlay` enables exactly the catalog's skills by qualified name (`plugin:skill`) as the Claude Agent SDK's `skills` option (claudeloop infrastructure/agent/capability_overlay.py); `run --skill` adds to them",
+              "web_search": "`[loops] builtin_web` is false unless the person sets it, and then claudeloop disallows Claude Code's own web tools, `CLAUDE_BUILTIN_WEB_TOOLS` (WebSearch and WebFetch; claudeloop domain/capabilities.py, infrastructure/capabilities/snapshot_applier.py); vibey passes neither `--web-search` nor `--deep-research`. Every loop gets `vibey_search` in SP-LOOPS Phase 6"
             }
           },
           "done_marker": "CLAUDELOOP_TASK_FULLY_COMPLETE",
@@ -697,8 +697,6 @@
             "{plan}",
             "--run-id",
             "{run_id}",
-            "--web-search",
-            "--deep-research",
             "{effort_argv...}",
             "--cwd",
             "{cwd}"

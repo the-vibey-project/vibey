@@ -284,8 +284,10 @@ def test_every_capability_a_descriptor_holds_is_in_the_document() -> None:
     codexloop = _engine(document, "codexloop")["capabilities"]
 
     assert claudeloop["skills"] is True
-    assert claudeloop["web_search"] is True
-    assert "--web-search" in claudeloop["evidence"]["web_search"]
+    # Off by default (SP-LOOPS Phase 4, R4): the snapshot's `[loops] builtin_web` decides.
+    assert claudeloop["web_search"] is False
+    assert "builtin_web" in claudeloop["evidence"]["web_search"]
+    assert "--capabilities" in claudeloop["evidence"]["files"]
     assert _engine(document, "claudeloop-local")["capabilities"]["web_search"] is False
     assert _engine(document, "gptossloop")["capabilities"]["skills"] is False
     assert (codexloop["mcp"], codexloop["skills"], codexloop["web_search"]) == (None, None, None)
@@ -448,7 +450,7 @@ def test_the_table_says_what_each_effort_passes_and_how_to_switch_a_local_engine
     ) in lines
     assert (
         "  claudeloop capabilities: yes files, paste_text, plugins (claude-plugins), mcp, "
-        "skills, web_search; unknown images, paste_images"
+        "skills; no web_search; unknown images, paste_images"
     ) in lines
     assert (
         "  codexloop capabilities: yes files, paste_text, plugins (skills-context); unknown "

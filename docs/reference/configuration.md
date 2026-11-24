@@ -997,6 +997,10 @@ a capability.
 | `disable` | `[]` | Names of plugins, MCP servers or skills to leave out. |
 | `[[loops.marketplaces]]` | none | A marketplace you added: `name` (a plain name; `vibey` is reserved), `source` (an `https://` or `ssh://` URL, `user@host:path`, or an absolute folder; `git://` and `http://` are refused as plaintext) and an optional `ref` (a branch, tag or commit to pin). `vibey loops marketplace update` fetches and locks it; until then a run that needs it stops and says so. |
 | `[[loops.mcp_servers]]` | none | An MCP server: `name`, `trust` and either `command` (for `trust = "local"`: a stdio server, its argv as a list, never run through a shell) or `url` (for `trust = "remote"`: `https://` with a host, no credentials). `env_allow` names the only environment variables a local server keeps, never one that carries a secret (a token, key, password or the Brave key). Trust decides egress, budget and which sessions mount a server; a server's output is always data, never instruction. |
+| `builtin_web` | `false` | Whether a loop keeps its engine's own web tools. `false`: a claudeloop run disallows Claude Code's `WebSearch` and `WebFetch`. `true` leaves them on, except on `claudeloop-local`, whose local backend cannot serve them: there they stay off and the run says so in a notice. |
+| `instruction_files` | `["CLAUDE.md", "AGENTS.md"]` | Plain file names (never paths) a claudeloop run reads from its own working folder only and appends to its system prompt as instruction text, never to the plan. A missing file is skipped; a symlink, a file that is not regular or text that is not UTF-8 is refused, never followed or read. At most 16. |
+| `instruction_max_bytes` | `65536` | The largest instruction file inlined, from 1 to 1048576. A larger one is never cut: the run names it with its size and tells the agent to read it. |
+| `snapshot_max_age_days` | `7` | How long, at least, a run snapshot must have gone unchanged before a starting worker's sweep removes it (at least 1). The sweep always waits at least the engine run deadline plus an hour, whatever this says. |
 
 Names are letters, digits, `.`, `_` and `-`, starting with a letter or digit, at most 128
 characters. A source or ref may not start with `-`, hold control characters or run past 4096
@@ -1040,8 +1044,24 @@ marketplace that ships with vibey locks itself the first time it is used, as
 locked only by `vibey loops marketplace update`. A run never fetches: it copies what the lock
 names into its own snapshot, checks the copy against the lock and loads only the copy, and stops
 naming `vibey loops marketplace update <name>` when a marketplace is not locked or its files
-changed since. Nothing yet changes how a loop runs: the loops apply the snapshot from SP-LOOPS
-Phase 4 on.
+changed since.
+
+**What a run is given today (SP-LOOPS Phase 4).** Only a BUILD run on `claudeloop` or
+`claudeloop-local` applies the bundle. Before the engine starts, vibey resolves the run's
+snapshot, writes its capability document into the run's own snapshot folder, records
+`LoopCapabilitiesSnapshotted` on the ledger (the digest and counts, never a path, command, URL
+or variable) and starts the run with `claudeloop run --capabilities PATH`. claudeloop then loads
+no user, project or local Claude settings: only the snapshot's plugin folders, exactly the
+catalog's skills, the run's input folders, the MCP servers above (a local one started through a
+launcher that keeps only its `env_allow` names, a remote one over streamable HTTP), the
+`instruction_files`, and the built-in web tools only as `builtin_web` says. `builtin_web`,
+`instruction_files` and `instruction_max_bytes` are part of what a run is given, so they enter
+the snapshot's digest; `snapshot_max_age_days` does not. A snapshot that cannot be resolved
+parks the job on a [`loop_capabilities_unresolved`](cli.md#vibey-gates-project_id) gate: the
+run never starts without it. The run's snapshot folder is removed when the run ends, however
+it ends, and a starting [`vibey worker`](cli.md#vibey-worker) sweeps the ones a crashed worker
+left. `codexloop`, `gptossloop` and `qwenloop`, BUILD's verify reviewer, DESIGN and DECOMPOSE
+do not apply the bundle yet: they run as before.
 
 ## `[inputs]` { #inputs }
 
@@ -1721,6 +1741,10 @@ engine it is declared for. Some things need declaring:
 
 - claudeloop's GitHub issue import needs `GH_TOKEN` or `GITHUB_TOKEN` for a private
   repository.
+- A local MCP server's [`env_allow`](#loops) variable reaches the server only if it reaches the
+  claudeloop session first, so it must also be passed through here (or be on the session's
+  list already). `env_allow` only decides which of the session's variables the server keeps; a
+  name the session does not have is skipped, and claudeloop logs that name, never a value.
 
 Some names can never be declared, by anyone. For every engine: vibey's own `VIBEY_*`
 variables (`VIBEY_PG_URL`, the queue and ledger DSN, among them), libpq's `PG*`, any
