@@ -29,7 +29,7 @@ from qwenloop.domain.model import (
     RunStatus,
     ServerInfo,
 )
-from qwenloop.infrastructure.capability_loader import OUTSIDE_WORKTREE
+from qwenloop.infrastructure.capability_loader import CONVENTIONS, OUTSIDE_WORKTREE
 from qwenloop.infrastructure.dispatch_benchmark import DispatchBenchmarkResult
 from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE
@@ -1682,7 +1682,8 @@ def test_capabilities_applied_is_in_the_runs_events_with_counts_only(
         f"{SKILLS_HEADING}\nRead one with skill_read; skills_list pages through them.\n"
         "- alpha:lint - Lints the tree.\n- alpha:verify (command)\n\n"
         f"{SERVERS_HEADING}\nCall mcp_list to see a server's tools, and mcp_call to use one.\n"
-        f"- probe (local)\n\n{HEADING.format(name='CLAUDE.md')}\n\nRun the gates.\n"
+        f"- probe (local)\n\n{CONVENTIONS}\n\n"
+        f"{HEADING.format(name='CLAUDE.md')}\n\nRun the gates.\n"
     )
 
 
