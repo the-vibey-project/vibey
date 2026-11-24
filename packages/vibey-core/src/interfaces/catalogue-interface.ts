@@ -29,7 +29,10 @@ export interface EngineCapabilities {
   readonly files: boolean | null;
   readonly paste_text: boolean | null;
   readonly paste_images: boolean | null;
-  /** "skills-context", "claude-plugins", or null (unknown). */
+  /**
+   * A `PluginSystem` ("skills-context", "claude-plugins", "vibey-bundle"), or null (unknown).
+   * A string, so a name a newer vibey adds is carried and simply earns no menu.
+   */
   readonly plugins: string | null;
   readonly mcp: boolean | null;
   readonly evidence: Readonly<Record<string, string>>;

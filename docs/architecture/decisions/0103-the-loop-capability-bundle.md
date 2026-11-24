@@ -225,6 +225,9 @@ ADR-0092 (its 2026-11-25 amendment). The status above is unchanged; these are it
 `gptossloop`'s and `qwenloop`'s full-access gaps are now none (`plugins` is `vibey-bundle`,
 `skills` and `mcp` are `true`). Each of those three claims is pinned to runner code
 (`tests/meta/loop_runner_facts.py`), and its evidence ends `unit-proven; real-run probe pending`.
+The VS Code extension knows `vibey-bundle` too (`Capabilities.PLUGIN_SYSTEMS` in
+`clients/vscode/src/core/capabilities.ts`, `PluginSystem` in `@vibey/core`), so it still offers
+`gptossloop` and `qwenloop` the plugin (context packet) menu they had under `skills-context`.
 
 Still open after Phase 5:
 
@@ -233,10 +236,6 @@ Still open after Phase 5:
 - claudeloop enforces no remote call budget (R13): only the local runner counts remote
   `tools/call` requests.
 - The token estimate is characters ÷ 4, not the model's own tokenizer.
-- The VS Code extension does not know `vibey-bundle` yet: `clients/vscode/src/core/capabilities.ts`
-  and `@vibey/core`'s `capabilities-interface.ts` type `plugins` as `skills-context` or
-  `claude-plugins` only. Nothing breaks, since the catalogue parser accepts any string, but the
-  extension offers no plugin menu for `gptossloop` or `qwenloop`. A TypeScript follow-up.
 
 ## Alternatives considered
 
