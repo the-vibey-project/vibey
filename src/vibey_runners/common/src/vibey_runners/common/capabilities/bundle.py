@@ -6,6 +6,10 @@
 plugins = ["currency-research@vibey", "linting@acme"]   # name@marketplace; absent = research
 skills = ["research-search-and-source-quality"]          # skills every loop is pointed at
 disable = ["old-skill"]                                  # plugins, servers or skills to drop
+builtin_web = false                                      # the engine's own web tools (R4)
+instruction_files = ["CLAUDE.md", "AGENTS.md"]           # read from the run's folder (R8)
+instruction_max_bytes = 65536                            # larger ones are named, not inlined
+snapshot_max_age_days = 7                                # when a worker sweeps old snapshots
 
 [[loops.marketplaces]]
 name = "acme"
@@ -28,7 +32,10 @@ Every key, at every level, is known or refused, and a refusal names the key path
 (`BundleError`), so a typo never silently drops a capability. Names are plain identifiers (they
 later become folder names and lock keys), sources and refs can never be read as a command-line
 option, lists are capped, and the marketplace name `vibey` is reserved for the copy that ships in
-the wheel. Declared by `interfaces/bundle_interface.py::BundleSpecInterface`.
+the wheel. `builtin_web`, `instruction_files` and `instruction_max_bytes` are part of what a loop
+is given (SP-LOOPS Phase 4, R13), so they enter the snapshot's digest; `snapshot_max_age_days` is
+housekeeping and does not. Like every key but `disable`, they come only from the person's own
+file. Declared by `interfaces/bundle_interface.py::BundleSpecInterface`.
 """
 
 from __future__ import annotations
@@ -55,7 +62,30 @@ MAX_TEXT: Final = 4096
 """The longest a source, ref, URL or command argument may be, in characters."""
 
 _ROOT: Final = "loops"
-_KEYS: Final = frozenset({"marketplaces", "plugins", "mcp_servers", "skills", "disable"})
+_KEYS: Final = frozenset(
+    {
+        "marketplaces",
+        "plugins",
+        "mcp_servers",
+        "skills",
+        "disable",
+        "builtin_web",
+        "instruction_files",
+        "instruction_max_bytes",
+        "snapshot_max_age_days",
+    }
+)
+DEFAULT_INSTRUCTION_FILES: Final = ("CLAUDE.md", "AGENTS.md")
+"""The instruction files a loop reads from its run's folder when `[loops]` names none (R8)."""
+INSTRUCTION_FILES_MAX: Final = 16
+"""The most instruction files `[loops] instruction_files` may name."""
+DEFAULT_INSTRUCTION_MAX_BYTES: Final = 65536
+"""The largest instruction file inlined into a loop's system prompt; a larger one is named, with
+its size, for the agent to read (R8: never truncated)."""
+INSTRUCTION_MAX_BYTES_CEILING: Final = 1024 * 1024
+"""The most `[loops] instruction_max_bytes` may be: 1 MiB."""
+DEFAULT_SNAPSHOT_MAX_AGE_DAYS: Final = 7
+"""How old, in days, a run's snapshot folder may be before a worker's sweep removes it (R10)."""
 _MARKETPLACE_KEYS: Final = frozenset({"name", "source", "ref"})
 _SERVER_KEYS: Final = frozenset({"name", "trust", "command", "url", "env_allow"})
 _TRUST: Final[tuple[McpTrust, ...]] = ("local", "remote")
@@ -85,10 +115,16 @@ class BundleSpec:
     mcp_servers: tuple[McpServerSpec, ...]
     skills: tuple[str, ...]
     disabled: frozenset[str]
+    builtin_web: bool = False
+    instruction_files: tuple[str, ...] = DEFAULT_INSTRUCTION_FILES
+    instruction_max_bytes: int = DEFAULT_INSTRUCTION_MAX_BYTES
+    snapshot_max_age_days: int = DEFAULT_SNAPSHOT_MAX_AGE_DAYS
 
     @classmethod
     def default(cls) -> BundleSpec:
-        """The bundle of a person who wrote no `[loops]`: the research plugins, nothing else."""
+        """The bundle of a person who wrote no `[loops]`: the research plugins, nothing else; the
+        engine's own web tools off, `CLAUDE.md` and `AGENTS.md` read up to 64 KiB, and snapshots
+        swept after a week."""
         return cls.from_mapping({})
 
     @classmethod
@@ -109,6 +145,22 @@ class BundleSpec:
             mcp_servers=cls._servers(raw.get("mcp_servers", [])),
             skills=cls._names(raw.get("skills", []), f"{_ROOT}.skills"),
             disabled=frozenset(),
+            builtin_web=cls._bool(raw.get("builtin_web", False), f"{_ROOT}.builtin_web"),
+            instruction_files=cls._instruction_files(
+                raw.get("instruction_files", list(DEFAULT_INSTRUCTION_FILES))
+            ),
+            instruction_max_bytes=cls._whole(
+                raw.get("instruction_max_bytes", DEFAULT_INSTRUCTION_MAX_BYTES),
+                f"{_ROOT}.instruction_max_bytes",
+                1,
+                INSTRUCTION_MAX_BYTES_CEILING,
+            ),
+            snapshot_max_age_days=cls._whole(
+                raw.get("snapshot_max_age_days", DEFAULT_SNAPSHOT_MAX_AGE_DAYS),
+                f"{_ROOT}.snapshot_max_age_days",
+                1,
+                None,
+            ),
         )
         return bundle.narrowed_by(cls.disable_names(raw.get("disable", [])))
 
@@ -198,6 +250,35 @@ class BundleSpec:
                 raise BundleError(where, f"names {name} twice")
             names.append(name)
         return tuple(names)
+
+    @staticmethod
+    def _bool(value: object, path: str) -> bool:
+        if not isinstance(value, bool):
+            raise BundleError(path, "must be true or false")
+        return value
+
+    @staticmethod
+    def _whole(value: object, path: str, least: int, most: int | None) -> int:
+        """A whole number from `least` to `most` (no ceiling when `most` is None); a TOML
+        boolean is not one, though Python counts it as an int."""
+        if (
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or value < least
+            or (most is not None and value > most)
+        ):
+            span = f"at least {least}" if most is None else f"between {least} and {most}"
+            raise BundleError(path, f"must be a whole number, {span}")
+        return value
+
+    @classmethod
+    def _instruction_files(cls, value: object) -> tuple[str, ...]:
+        """Plain file names, read only from the run's own folder: a name is never a path."""
+        path = f"{_ROOT}.instruction_files"
+        names = cls._names(value, path)
+        if len(names) > INSTRUCTION_FILES_MAX:
+            raise BundleError(path, f"must hold at most {INSTRUCTION_FILES_MAX} entries")
+        return names
 
     @classmethod
     def _marketplaces(cls, value: object) -> tuple[MarketplaceSpec, ...]:

@@ -108,4 +108,6 @@ forbidden_modules = [
     "vibey_runners.common.capabilities.safe_text",
     "vibey_runners.common.capabilities.skill_index",
     "vibey_runners.common.capabilities.snapshot_copier",
+    "vibey_runners.common.capabilities.snapshot_document",
+    "vibey_runners.common.capabilities.snapshot_document_store",
 ]
