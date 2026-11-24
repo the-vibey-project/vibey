@@ -65,10 +65,54 @@ the script; where PostgreSQL would come from apt-get or dnf through sudo, the sc
 password may be asked before the step runs, and with no terminal to ask on it stops and says
 what to run instead. Without `--full` the script runs exactly what it ran before.
 
-Two steps have no vibey command, so `--full` names them for the person rather than inventing
-one in shell: creating the database and its roles (no vibey code issues `CREATE DATABASE`), and
-installing Ollama and pulling the default model (no vibey command fetches a model). Both are
-printed as one line each under "Still yours to do".
+The two steps that had no vibey command now have one, so that `--full` takes a new macOS or
+Linux machine to where a first project runs on the local default engine, and each is useful
+alone:
+
+- **`vibey install --database`** (`LocalDatabaseSetup`) runs `psql` as the local PostgreSQL's
+  administrator -- the person with Homebrew, the `postgres` account through `sudo -u` with
+  apt-get or dnf, or `--admin-user` -- to create the owner role and the application role of
+  ADR-0055 (`LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE`) and the database the owner owns, then
+  runs `vibey migrate`'s own `OwnerMigration`. Each role's password is random, kept in libpq's
+  password file (`PGPASSFILE`, else `~/.pgpass`, mode 0600) *before* the role exists, and
+  reaches PostgreSQL only as a SCRAM verifier, so every DSN is password-free and every
+  connection still proves a password (10.j): a peer or trusted-socket DSN was the easier path
+  and 10.j forbids it. A role the file has no password for, or a database another role owns,
+  is refused rather than taken over; a second run changes nothing. vibey reads
+  `VIBEY_PG_URL` from the environment alone, so the command prints the one line to keep
+  (`export VIBEY_PG_URL=postgresql://vibey_app@localhost:5432/vibey`) and the one-command form
+  of `vibey migrate`; where that DSN should persist is left open (below). It does not rewrite
+  `pg_hba.conf`, ADR-0061's owed step: the closing lines say it is still the person's.
+- **`vibey install --model`** (`OllamaModelPuller`) pulls the tag `vibey models --default-tag`
+  prints -- `VIBEY_OLLAMA_MODEL`, then `VIBEY_SOVEREIGN_MODEL`, then ADR-0099's default --
+  through the Ollama API at `VIBEY_OLLAMA_URL`, after a bounded wait for Ollama to answer. It
+  pulls nothing when the model is there, says the model and its size first (12.1 GB for the
+  default), and refuses with the next step when Ollama is missing, silent, or the pull fails.
+
+`--full` now runs, in order: `vibey install --postgres`, `vibey install --database`,
+`vibey migrate` (only with `VIBEY_FULL_DATABASE=0` and `VIBEY_PG_MIGRATE_URL` set, for a
+database of the person's own), Ollama, `vibey install --model`, `vibey connect --yes`; the new
+switches are `VIBEY_FULL_DATABASE`, `VIBEY_FULL_OLLAMA` and `VIBEY_FULL_MODEL`. Ollama itself
+follows the uv precedent above: skipped when `ollama` is on `PATH`; on macOS `brew install
+ollama` and `brew services start ollama` (Homebrew, as `vibey install --postgres` uses there),
+and without Homebrew a refusal naming the download page; on Linux Ollama's own installer from
+`VIBEY_OLLAMA_INSTALLER` (default `https://ollama.com/install.sh`), fetched to a file and then
+run, so a failed download stops the step instead of running half a script, after saying that
+its sudo may ask for a password (and refusing with no terminal to ask on). The `VIBEY_PG_URL`
+the database step printed is used for the rest of the run, so the closing `vibey doctor`
+checks the new database, and it is repeated under "Still yours to do" with the `pg_hba.conf`
+step.
+
+The engine is installed as `vibey-engine[hub]` (`VIBEY_ENGINE_EXTRAS`, default `hub`; empty
+installs the bare engine), from source as `--editable DIR[hub]`. Installing the published
+0.4.0 bare into a throwaway home showed why: `vibey serve` and `vibey hub start` failed with
+`No module named 'fastapi'`, so neither the hub nor the hub `vibey mcp` starts for an MCP
+client could run, while `vibey-engine[hub]` served `GET /` with 200. krypton-app already
+depends on `vibey-engine[hub]`.
+
+Open: where `VIBEY_PG_URL` persists. Today it is the environment only, and the installer prints
+the line for the person's shell profile; a `[database]` key in the person's own `vibey.toml`, or
+writing the supervised services' environment file, would each be a decision of their own.
 
 Three defects found in a run of the installer are fixed with it. When uv's tool bin
 directory is not on `PATH`, the script looks there (`uv tool dir --bin`), adds it for the rest
@@ -79,4 +123,5 @@ and `$0` is no file. And the closing line no longer names `scripts/uninstall-kry
 a piped install does not have: it names `uv tool uninstall krypton-app` and the uninstaller's
 URL, and only when krypton was installed. The core is still never uninstalled (§3).
 `tests/meta/test_install_scripts.py` now checks that every command and option `--full` passes
-is one the `vibey` CLI ships.
+is one the `vibey` CLI ships, that the `VIBEY_PG_URL` line it reads is the one
+`vibey install --database` prints, and that the engine is installed with the `hub` extra.
