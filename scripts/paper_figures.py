@@ -1316,7 +1316,7 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             else f"{len(tags)} releases on the repository"
         )
         caption = (
-            f"Every release recorded in the tracked release ledger ({DEFAULT_RELEASE_LEDGER}) as of "
+            f"Every release recorded in the tracked release ledger ({_tex(DEFAULT_RELEASE_LEDGER)}) as of "
             f"revision {data['head'][:8]}, {lanes_text}; a release is selected by its date, not by "
             f"whether the revision's history reaches it, except that a release cut at or after the "
             f"revision itself is left out: it did not exist when the revision was the tip. "
