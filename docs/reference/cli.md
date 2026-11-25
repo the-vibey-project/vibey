@@ -99,8 +99,8 @@ reads any run.
 | Code | Meaning |
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
-| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `gates` (said on stderr), `abandon`, `inputs add`, `inputs list`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `abandon` without `--reason`, or with a `--reason` or `--by` that cannot be recorded; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry; `inputs add` with a refused input, or with anything but exactly one of `--paste`, `--paste-stdin` and `--file`. |
+| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `gates` (said on stderr), `abandon`, `inputs add`, `inputs list`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `install --database` found PostgreSQL not ready, could not run `psql` as the administrator, refused a role or database it did not make, or left the ledger guard not in force; `install --model` found no Ollama answering or the pull failed; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`, `--database` or `--model`; `install --database` with a name that is not a plain lowercase identifier or the same owner and application role; `install --model` with a `VIBEY_OLLAMA_URL` that is not an http(s) URL with a host; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `abandon` without `--reason`, or with a `--reason` or `--by` that cannot be recorded; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry; `inputs add` with a refused input, or with anything but exactly one of `--paste`, `--paste-stdin` and `--file`. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types and, last, the error's permanent code (``(E0040: run `vibey explain E0040`)``). See [Error codes](errors.md). |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 | `78` | Your own `vibey.toml` cannot be read or rewritten for `vibey loops marketplace`, `plugin`, `mcp` or `skills`, or cannot be read (or its `[inputs]` is refused) for `vibey inputs add` or `list` (EX_CONFIG); the run input store's credential variables are not set, or the store cannot be made, read or written, for `vibey inputs add` or `list`. A supervisor setting no service could run with: `supervisor install` or `supervisor status` with an unreadable `[supervisor]` table, a path on volatile storage or inside a linked worktree, `vibey` not on `PATH`, or no delivery bridge under `--repo`; `supervisor exec` with a missing or malformed environment file. |
@@ -798,20 +798,65 @@ away instead of waiting for it.
 
 ## `vibey install`
 
-Install local dependencies that vibey can manage explicitly.
+Install local dependencies that vibey can manage explicitly. Choose at least one target;
+with several they run in the order PostgreSQL, database, model, and the first that fails
+stops the rest. Every target is safe to run again. `scripts/install.sh --full` runs all three
+([ADR-0082](../architecture/decisions/0082-install-copy-reinstall-and-a-core-that-stays.md)).
 
 ```bash
-vibey install --postgres
+vibey install --postgres --database --model
 ```
 
 | Option | Default | What it does |
 |---|---|---|
 | `--postgres` | off | Install and start the current stable PostgreSQL major using Homebrew, apt, or dnf. |
+| `--database` | off | On the local PostgreSQL (which must be accepting connections), make the owner role and the application role of [database roles](configuration.md#database-roles) and the database the owner owns, then migrate as `vibey migrate` does and print the ledger guard. |
+| `--model` | off | Pull the model the local loop runs (`vibey models --default-tag`) into the Ollama at `VIBEY_OLLAMA_URL`, unless it is already there. |
+| `--db-name` | `vibey` | With `--database`: the database. |
+| `--owner-role` | `vibey` | With `--database`: the role that owns the schema and runs `vibey migrate`. |
+| `--app-role` | `vibey_app` | With `--database`: the role every other command connects as (`VIBEY_PG_URL`). |
+| `--admin-user` | you with Homebrew; `postgres` with apt-get or dnf | With `--database`: the account `psql` runs as to create the roles and the database. Another account than yours is reached with `sudo -u` (or, as root without sudo, `runuser -u`). |
+| `--wait-seconds` | `30` | With `--model`: how long to wait for Ollama to answer (a service just started may not listen yet). |
 
 The installer targets PostgreSQL 18 today. The application floor is
 PostgreSQL 14, and the same SQL/runtime contract is tested against 14, 15, 16,
-17, and 18 in CI. Installation does not invent or persist a database DSN:
-set `VIBEY_PG_URL` to a database you own after the server is ready.
+17, and 18 in CI.
+
+**`--database`.** Names must be plain lowercase identifiers (exit 2 otherwise, `E0098`). It runs
+`psql` as the administrator with the SQL on its standard input, never its command line:
+
+1. Asks which of the two roles exist and who owns the database.
+2. Keeps a random password for each new role in libpq's password file (`PGPASSFILE`, else
+   `~/.pgpass`, written whole and mode 0600) *before* creating the role. A role the file
+   already has a password for keeps it. A role that exists with no password in the file, or a
+   database another role owns, is refused and nothing is written (`E0099`).
+3. Creates each missing role `LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE`, or resets an existing
+   one to the file's password, as a SCRAM verifier computed by vibey, so the password never
+   reaches `psql` (sub-doctrine 10.j). Creates the database owned by the owner role, and gives
+   it `public` (what PostgreSQL 15+ does already).
+4. Applies the migrations as the owner, reconciles the application role's grants and
+   inspects the ledger guard, exactly as [`vibey migrate`](#vibey-migrate), connecting with
+   password-free DSNs that read the same file.
+
+It prints what it created (or that everything was already there), where the passwords are,
+the migrations it applied and the ledger guard, then the line to keep in your shell profile,
+`  export VIBEY_PG_URL=postgresql://vibey_app@localhost:5432/vibey`, and the one-command form
+of `vibey migrate` with the owner's DSN, which is never exported. No password is printed or
+logged. It does not edit `pg_hba.conf`: requiring scram-sha-256 for every connection
+(`SECURITY.md` §7) stays yours, and `vibey doctor` fails `local-auth` until it is done. Exit 0
+when the guard is in force; 1 when PostgreSQL is not ready, `psql` cannot run as the
+administrator (`E0100`, `E0101`), a role or database is refused, a migration fails, or the
+guard is not in force.
+
+**`--model`.** The tag is `VIBEY_OLLAMA_MODEL`, then the build `VIBEY_SOVEREIGN_MODEL` names,
+then the sovereign default (ADR-0099). It waits up to `--wait-seconds` for the Ollama at
+`VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`) to answer, asks it whether the model is
+there (exit 0, nothing pulled, when it is), says the model and its download size when vibey
+knows it (12.1 GB for the default, 14 GB for `stock`), and streams `POST /api/pull`: each new
+stage once, and a download's progress every 10%. With no `ollama` on `PATH` and nothing
+answering it says how to install Ollama; with Ollama installed but silent, how to start it;
+when the pull fails, why, and to run it again (Ollama keeps the parts it finished). Those exit
+1; a `VIBEY_OLLAMA_URL` that is not an http(s) URL with a host exits 2.
 
 ### Examples in `--help`
 
@@ -1903,6 +1948,7 @@ tool-call protocol, marked slower and measured unreliable.
 | Option | Default | What it does |
 |---|---|---|
 | `--json` | off | Print the same facts as JSON: `families` (`key`, `label`, `suggested_tag`, `pull`), `ollama_url`, `problem` (null, or why no Ollama answered), and `installed` (`tag`, `family`, `size_gb`, `capabilities` -- null when unknown -- and `jobs`). |
+| `--default-tag` | off | Print only the tag the local loop runs here -- `VIBEY_OLLAMA_MODEL`, then the build `VIBEY_SOVEREIGN_MODEL` names, then the sovereign default -- and exit 0, asking no Ollama. It is the tag [`vibey install --model`](#vibey-install) pulls. |
 
 ## `vibey cost [PROJECT_ID]`
 
@@ -2771,12 +2817,12 @@ Variables read by code under `src/vibey`:
 
 | Variable | Read by | Effect |
 |---|---|---|
-| `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor`; `migrate` | The application role's PostgreSQL 14+ DSN ([database roles](configuration.md#database-roles)). There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). `vibey install --postgres` installs the server but does not set this variable for the parent shell. |
+| `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor`; `migrate` | The application role's PostgreSQL 14+ DSN ([database roles](configuration.md#database-roles)). There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). `vibey install --postgres` installs the server; `vibey install --database` makes the database and prints the line that sets this variable, which no command can set for the parent shell. |
 | `VIBEY_PG_MIGRATE_URL` | `migrate` only | The owner's DSN. Migrations run on it and the application role's grants are reconciled from it. Give it to that one command (`VIBEY_PG_MIGRATE_URL=… vibey migrate`); never export it. |
 | `VIBEY_STATE_PG_URL`, `VIBEY_STATE_KEY` and the other `VIBEY_STATE_*` | `state` only | The database the state sync reads and writes (default `VIBEY_PG_URL`), the state key, and where the sealed state lives; every one in [State sync](configuration.md#state-sync). |
 | `VIBEY_EVIDENCE_DIR` | `work --provider gptossloop`, `worker --provider gptossloop` | Directory of reading material for the gptossloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
 | `VIBEY_FEATURE_GPTOSSLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables gptossloop; any other set value, `0` included, disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] gptossloop` in `./vibey.toml` and `worker` to the project's stored config; with neither, gptossloop is on (ADR-0064). |
-| `VIBEY_OLLAMA_URL` | `work` and `worker` with `--provider gptossloop`; `doctor --sovereign-fit`; `loops`; the worker's local engines | The Ollama server, default `http://127.0.0.1:11434`. Only an `http(s)` URL with a host is accepted. |
+| `VIBEY_OLLAMA_URL` | `work` and `worker` with `--provider gptossloop`; `doctor --sovereign-fit`; `loops`; `install --model`; the worker's local engines | The Ollama server, default `http://127.0.0.1:11434`. Only an `http(s)` URL with a host is accepted. |
 | `VIBEY_OLLAMA_MODEL` | as `VIBEY_OLLAMA_URL` | The local model tag (or variant key `heretic` / `stock`); `--ollama-model` beats it, and it beats `VIBEY_SOVEREIGN_MODEL` (ADR-0099). |
 | `VIBEY_SOVEREIGN_MODEL` | as `VIBEY_OLLAMA_URL` | Sovereign model variant key: `heretic` (default, `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`) or `stock` (`gpt-oss:20b`). Beaten by `--ollama-model` and `VIBEY_OLLAMA_MODEL`; an unknown value raises an error naming the valid keys (ADR-0099). |
 | `VIBEY_OLLAMA_TIMEOUT` | the sovereign DESIGN and DECOMPOSE providers | Seconds per request, default `900`. |
