@@ -1,12 +1,38 @@
-# vibey-skills
+---
+description: "Reference for vibey-skills, the Claude Code plugin marketplace and skills CLI inside vibey-engine: install, every plugin, the retrieval engine, and how vibey's loops use it."
+---
+
+# vibey-skills: install source-cited skills into Claude Code or any agent
+
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** vibey-skills is a marketplace of 153 Claude Code plugins
+> holding 826 Agent Skills: long, source-cited reference documents an agent loads when a task
+> matches. In Claude Code, run `/plugin marketplace add the-vibey-project/vibey`, then
+> `/plugin install <plugin>@vibey`. For any other agent, `vibey-skills install` (in
+> `vibey-engine`) copies skills into `~/.claude/skills`. vibey's own loops are given plugins from
+> this marketplace through the loop capability bundle (ADR-0103).
+
+## How to read this page
+
+Daniel scrolled through a table that seemed to have no end.
+
+**Daniel:** Professor, am I meant to read every row?
+
+**Professor Feynman:** No more than you read every book in a library before borrowing one. The
+quick start tells you how to borrow; the table is the catalogue, so you search it for the subject
+you need. The sections after the table say how the shelves are kept in order.
+
+## What it is
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
 > **153 Claude Code plugins. 826 Agent Skills.** Long-form, source-cited practitioner
-> references for the parts of software engineering an agent is most likely to get
-> confidently wrong — security, compliance, Azure, identity automation (Okta),
+> references. The catalogue began with the parts of software engineering an agent is most likely
+> to get confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
-> engineering, process, and technical writing. Install as a marketplace, or from the
+> engineering, process, and technical writing — and now also covers the physical sciences and
+> engineering, business and finance, law, health, crafts, faith and family, and more: the table
+> below lists every plugin. Install as a marketplace, or from the
 > `vibey-engine` package that carries the CLI.
 
 Formerly **vibe-engineering-skills** — see [NOTICE.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/NOTICE.md).
@@ -48,7 +74,7 @@ root manifest is rendered from this tree's own `.claude-plugin/marketplace.json`
 That root manifest is the only marketplace there is. `vibey-skills` is no longer a
 separate PyPI project, so the old `/plugin marketplace add the-vibey-project/vibey-skills`
 shortcut and the packaged `<plugin>@vibey-skills` route are both retired (vibey ADR-0037);
-the packaged manifest it printed now ships inside `vibey` and is what the root manifest is
+the packaged manifest it printed now ships inside `vibey-engine` and is what the root manifest is
 rendered from.
 
 **With the CLI instead** — same skills, any agent that reads `SKILL.md`. The
@@ -62,28 +88,53 @@ vibey-skills install security-principles azure-cloud-infra
 ```
 
 `vibey-skills` is then on your PATH (`vibe-skills` still works as a deprecated alias).
-Without installing anything permanently, `uvx --from vibey vibey-skills list` does the
+Without installing anything permanently, `uvx --from vibey-engine vibey-skills list` does the
 same in one shot.
 
 ```console
 $ vibey-skills list
+aerospace-engineering  (0.1.0, aerospace, 5 skills)
+  - aero-aerodynamics-airfoils-and-compressible-flow
+  - aero-drones-launch-vehicles-flight-test-and-design
+  - aero-performance-stability-and-propulsion
+  - aero-reference
+  - aero-structures-aeroelasticity-and-avionics
+
 agile-delivery  (0.1.0, engineering-process, 3 skills)
   - delivery-velocity
   - engineering-metrics
   - security-first-agile
-
-ai-and-data  (0.2.0, ai, 4 skills)
-  - ai-ml-landscape
-  - data-engineering
-  - llm-cost-optimization
-  - rag-and-agents
 …
 ```
 
-`vibey-skills marketplace` prints the packaged marketplace folder (the one holding
-`.claude-plugin/`) for `/plugin marketplace add <folder>`;
-`--dest`, `--link`, `--dry-run`, and `--force` are covered in the
+### Every `vibey-skills` command
+
+| Command | What it does |
+|---|---|
+| `list` | List plugins and their skills. |
+| `install [PLUGIN ...] [--all] [--dest DIR] [--link] [--force] [--dry-run]` | Copy skills into `~/.claude/skills` (or `--dest`). `--link` symlinks instead of copying; an existing skill directory is skipped and named unless `--force`; `--dry-run` writes nothing. |
+| `path` | Print the packaged plugins root. |
+| `marketplace` | Print the packaged marketplace folder (the one holding `.claude-plugin/`), for `/plugin marketplace add <folder>`. |
+| `index build` / `index inspect` | Build or inspect a deterministic local full-text (FTS5) index of every `SKILL.md`. |
+| `search` | Search the indexed skill sections. |
+| `packet --request R --output O --manifest M [--index I] [--budget B]` | Compile a bounded context packet for an agent. |
+| `evaluate` | Score retrieval against a gold case set. |
+| `--version` | Print the version. |
+
+The options are covered in the
 [Usage docs](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/usage.md).
+
+### How vibey's loops use this marketplace
+
+vibey gives its loops plugins through the loop capability bundle (ADR-0103): the person declares
+marketplaces, plugins and MCP servers in their own `vibey.toml`, the content is locked by hash,
+and nothing is fetched except on their word. The copy of this marketplace that ships inside the
+`vibey-engine` wheel is the default marketplace, named `vibey`, and the default bundle gives every
+loop the `currency-research` plugin
+(`src/vibey_runners/common/src/vibey_runners/common/capabilities/defaults.py`). The commands are
+`vibey loops marketplace add|update|list`, `vibey loops plugin`, `vibey loops mcp`,
+`vibey loops skills list` and `vibey loops snapshots`. claudeloop and the local runner read the
+locked snapshot through `--capabilities`; codexloop does not take one.
 
 ### Migrating from vibe-engineering-skills
 
@@ -230,6 +281,7 @@ own `README.md` with the full skill list and trigger descriptions.
 | [radio-technology-for-software-devs](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/radio-technology-for-software-devs) | 0.1.0 | wireless | 6 | Why wireless breaks software intuitions, spectrum & bands, the link budget, range/rate/power, antennas & polarization, multipath & fading, noise floor, modulation, Shannon's limit, spread spectrum, OFDM, coding & retransmission, multiple access, SDR & IQ sampling, DSP essentials, Wi-Fi generations, BLE throughput reality, LPWAN & cellular IoT, Thread & Matter, GNSS, regulatory limits, RF security, debugging RF from software |
 | [refrigeration-ac-climate-control-food-water](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water) | 0.1.0 | building-systems | 5 | Vapour-compression cycle in practice, compressors & metering devices, refrigerant properties, safety classes & GWP, charge, evacuation & leaks, superheat & subcooling diagnosis, absorption/thermoelectric/evaporative, load calculation, duct sizing & static pressure, humidity & sensible vs latent, ventilation & IAQ, heat pumps & defrost, controls, envelope, spoilage mechanisms, the chain as a system, temperature limits & the danger zone, chilling & freezing rate, controlled atmosphere, transport refrigeration, data loggers & mean kinetic temperature, pharma cold chain, drying/curing/fermentation & water activity, water storage & treatment |
 | [reporting-and-dashboards](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/reporting-and-dashboards) | 0.1.0 | data-engineering | 5 | Analytics architecture, facts/dimensions/grain, fan-out & the chasm trap, additivity, why distinct counts don't decompose, metric definition drift, the semantic layer, time zones & fiscal calendars, late-arriving data, query performance, caching & staleness, dashboard design, chart selection, alerting, row-level security, embedded analytics, testing |
+| [research-deep-dives](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/research-deep-dives) | 0.1.0 | research | 18 | Source-cited deep dives across agriculture, operating systems, cognition, civilization, politics, science, technology, storytelling, and integrated systems. |
 | [resource-extraction-mining-and-oil](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil) | 0.1.0 | resources | 6 | Grade & tonnage, ore as an economic category, how deposits form, exploration, resources vs reserves & reporting codes, open pit design & stripping ratio, underground methods, drilling & blasting, comminution energy, flotation & separation, pyro- and hydrometallurgy, gold & cyanidation, tailings dam failure modes, acid mine drainage, petroleum geology, seismic exploration, mud systems & casing, well control & blowouts, hydraulic fracturing, decline curves, offshore, refining, coal, cost curves, safety, closure & legacy liabilities, social licence & artisanal mining |
 | [roads-bridges-and-public-infrastructure](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure) | 0.1.0 | construction | 6 | Infrastructure as a system, geometric design, sight distance & design speed, pavement & the fourth-power law, earthworks, geotechnics & drainage, traffic capacity & level of service, intersections, interchanges & roundabouts, the Safe System approach & survivable impact speeds, construction & work zones, bridge types & structural logic, loads & load rating, bearings, joints & details, scour, fatigue & fracture-critical members, vessel collision, inspection & condition rating, water supply & lead service lines, wastewater & combined sewer overflows, transit, ports, rail & airports, utility coordination, procurement, optimism bias & reference-class forecasting, asset management, fuel taxes, tolling & road pricing, environmental review, climate resilience, induced demand, the distributional legacy |
 | [robotics-software](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/robotics-software) | 0.1.0 | robotics | 5 | Robot stack, ROS 2 & DDS, perception & sensor fusion, state estimation & SLAM, motion planning, PID→MPC & whole-body control, manipulation, RL/imitation/VLA models, sim-to-real, real-time & safety, ISO 10218:2025, DO-178C |
@@ -251,7 +303,7 @@ own `README.md` with the full skill list and trigger descriptions.
 | [trip-planning-and-travel-strategies](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies) | 0.2.0 | travel | 6 | Trip type & purpose, choosing a destination, constraints-first planning, seasonality, budgeting, how airfare pricing actually works, fare buckets & advance purchase, flight routing & minimum connection times, points & miles honestly, accommodation, ground transport, booking order & optionality, passport validity & visas, travel insurance exclusions, health, safety in proportion, money abroad & fees, itinerary pacing, packing, jet lag, eSIMs & offline navigation, language & culture, food & water, group travel, long-term travel, handling disruption & passenger rights |
 | [ui-ux-design-principles](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/ui-ux-design-principles) | 0.1.0 | frontend | 5 | Perception & cognition, heuristics, IA & navigation, interaction per form factor, layout, visual design, design tokens, HIG/Material/Fluent, WCAG 2.2/EAA/APCA, UX writing, research, dark patterns, AI-era UI |
 | [vibey](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/vibey) | 0.1.0 | developer-tools | 1 | Drive vibey from Claude Code, Codex, Cursor, VS Code or any MCP chat client: MCP server wiring (`vibey mcp`) and the host-driven operator workflow skill |
-| [vibey-bootstrap](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/vibey-bootstrap) | 0.3.0 | cloud-infrastructure | 4 | The [vibey-bootstrap](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) library (v4.0.0, formerly `azure-bootstrap`): 4-phase bootstrap, v2 primitives, ten logging transports, subpackages, v3 DB/email/HTTP/AKS/governance/scaffold, TypeScript integration |
+| [vibey-bootstrap](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/vibey-bootstrap) | 0.3.0 | cloud-infrastructure | 4 | The [vibey-bootstrap](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) library (formerly `azure-bootstrap`; its API history is labelled v1 to v4, and it now ships inside `vibey-engine`): 4-phase bootstrap, v2 primitives, ten logging transports, subpackages, v3 DB/email/HTTP/AKS/governance/scaffold, TypeScript integration |
 | [video-game-development](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/video-game-development) | 0.1.0 | game-development | 5 | Engines, game loop, ECS, rendering, physics, animation, audio, gameplay AI, netcode (rollback/prediction), pipelines, frame budgets, game feel, shipping, production & business |
 | [vr-ar-development](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/vr-ar-development) | 0.1.0 | xr | 5 | Motion-to-photon latency, cybersickness, vergence-accommodation conflict, presence, displays & optics, inside-out tracking, stereo rendering & reprojection, foveated rendering, hand tracking & locomotion, AR planes/meshing/anchors, OpenXR & WebXR, spatial audio, comfort & accessibility, 3D UX, frame budgeting |
 | [weather-science](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/weather-science) | 0.2.0 | earth-science | 5 | Atmospheric structure, the energy budget, lapse rates & CAPE, moisture & cloud formation, geostrophic balance, thermal wind & vorticity, general circulation & jets, fronts & baroclinic instability, supercells & tornadoes, tropical cyclones, boundary layer, observation networks, NWP & data assimilation, ensembles, verification, predictability limits, ML forecasting |
@@ -278,10 +330,13 @@ tools/validate_manifests.py             Manifest and skill-frontmatter validator
 tools/check_links.py                    Hermetic link checker (README is also the PyPI long description)
 ```
 
-CI validates every manifest and frontmatter, runs the unit tests for the context
-engine and its CLI, checks that the built wheel carries every `SKILL.md`, smoke-tests
-`vibey-skills install --all` from the wheel, and builds the docs site with `mkdocs build
---strict` so a dead link on any of the 71 generated pages fails the build.
+CI (the vibey-skills rows of the `tools` job in the root `.github/workflows/ci.yml`, on Python
+3.12, 3.13 and 3.14) runs `tools/sync_catalogue_surfaces.py --check`,
+`tools/validate_manifests.py`, `tools/check_links.py` and the unit tests for the context engine
+and its CLI. On Python 3.12 it also runs `mypy --strict` and builds the docs site with
+`mkdocs build --strict`, then checks that the site has one built page per plugin and one per
+skill, so a missing or broken generated page fails the build. Nothing in CI builds a wheel or
+smoke-tests `vibey-skills install --all` from one.
 
 Beyond installing skills, the CLI can index them for retrieval: `vibey-skills index
 build` compiles every `SKILL.md` into a local search index, `search` queries it,
@@ -293,7 +348,7 @@ documentation.
 ## Docs & links
 
 - **[Documentation](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/index.md)** — [Installation](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/installation.md) · [Usage](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/usage.md) · [Plugin sources](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins) (the skills reference is generated from them, one page per plugin and per skill)
-- **[PyPI (`vibey`)](https://pypi.org/project/vibey-engine/)** · **[Releases](https://github.com/the-vibey-project/vibey/releases)** · **[Issues](https://github.com/the-vibey-project/vibey/issues)**
+- **[PyPI (`vibey-engine`)](https://pypi.org/project/vibey-engine/)** · **[Releases](https://github.com/the-vibey-project/vibey/releases)** · **[Issues](https://github.com/the-vibey-project/vibey/issues)**
 - **[CONTRIBUTING.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/CONTRIBUTING.md)** · **[SECURITY.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/SECURITY.md)** · **[CODE_OF_CONDUCT.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/CODE_OF_CONDUCT.md)** · **[CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/CLAUDE.md)** (conventions and the `SKILL.md` format)
 - Claude Code docs: [Plugins](https://code.claude.com/docs/en/plugins) · [Plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces) · [Agent Skills](https://code.claude.com/docs/en/skills)
 
@@ -305,23 +360,28 @@ Part of the same open-source family — MIT, and all shipping inside the one
 - **[claudeloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude)** · **[codexloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex)** — autonomous coding-session runners with the same contract, different vendor
 - **[vibey](https://github.com/the-vibey-project/vibey)** — six-phase queue conductor over the loop runners — background reading: the [vibey research paper](https://the-vibey-project.github.io/vibey/main/paper/) ([PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf)) and the vibey book ([PDF](https://the-vibey-project.github.io/vibey/main/book.pdf), [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub), [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html)).
 - **[vibey-bootstrap](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap)** — the Azure Functions cross-cutting layer the `vibey-bootstrap` plugin documents (formerly `azure-bootstrap`)
-- **[homebrew-tap](https://github.com/adammatthewsteinberger/homebrew-tap)** — `brew tap adammatthewsteinberger/tap`
 - **[clippy-pet](https://github.com/adammatthewsteinberger/clippy-pet)** — the fun one
-
-| [research-deep-dives](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/research-deep-dives) | 0.1.0 | research | 18 | Source-cited deep dives across agriculture, operating systems, cognition, civilization, politics, science, technology, storytelling, and integrated systems. |
 
 ## Contributing
 
 Nearly every contribution is Markdown (skill content) or JSON (manifests). To add or
 change a plugin: edit under `plugins/<name>/`, bump `version` in its `plugin.json`,
-mirror `version` / `description` / `category` into `marketplace.json`, update the table
-above if the skill count or summary changed, then:
+mirror `version` / `description` / `category` into `marketplace.json`, add or update its row
+in the table above (one row per plugin, in alphabetical order), then:
 
 ```bash
+python3 tools/sync_catalogue_surfaces.py --write   # rewrite the counts and each row's version and skill count from the tree
+python3 tools/sync_catalogue_surfaces.py --check   # what CI runs: fails on any drift
 python3 tools/validate_manifests.py
 python3 tools/check_links.py
+PYTHONPATH=src python3 -m unittest discover -s tests
 pip install -e ".[docs]" && mkdocs build --strict
 ```
+
+`sync_catalogue_surfaces.py` keeps every stated plugin and skill count, and each table row's
+version and skill count, equal to the tree; a line marked `counts:historical` is left alone.
+`tests/test_catalogue_counts.py` fails the build on a stale count, a missing or duplicated row,
+or a row whose version, category or skill count disagrees with the manifest.
 
 Branch from `develop`; PRs need green CI. Full workflow and the `SKILL.md` format:
 [CONTRIBUTING.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/CONTRIBUTING.md)
@@ -347,8 +407,10 @@ published package so a fix reaches every repository that uses it, not just this 
 ### Requirements
 
 Python 3.12+ (for `vibey-gh` and this package), Git, and the GitHub CLI
-(`gh`). A repository-level `ANTHROPIC_API_KEY` secret and an `AUTOMERGE_TOKEN` with the
-admin role are already configured, along with GitHub Pages deploying from Actions.
+(`gh`). The repository's secrets and Pages settings belong to the monorepo, not to this
+package; which of them `vibey-gh` needs is in
+[its README](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh)
+(a paid review key is needed only where a paid review is declared).
 
 ### Commands
 
@@ -374,7 +436,7 @@ train trusts.
 
 ### Architecture
 
-A pre-commit hook adds the fingerprint trailer locally; a pre-push hook refuses a push
+A `commit-msg` hook adds the fingerprint trailer locally; a `pre-push` hook refuses a push
 that fails `vibey-gh check`. The same checks run again, unconditionally, in CI, because a
 hook lives in a clone and can be bypassed. Managed workflow files are regenerated from
 `vibey-gh`'s own templates by `vibey-gh install` — hand-editing one is reported as "out of
@@ -394,8 +456,9 @@ before the package was absorbed and that file was removed.
 This package has no workflows of its own. GitHub runs only the repository root's
 [`.github/workflows/`](https://github.com/the-vibey-project/vibey/tree/develop/.github/workflows),
 and this package's gates are rows of the root `ci.yml` `tools` job:
-`tools/validate_manifests.py`, `tools/check_links.py` and the unittest suite, on Python 3.12
-through 3.14.
+`tools/sync_catalogue_surfaces.py --check`, `tools/validate_manifests.py`,
+`tools/check_links.py` and the unittest suite on Python 3.12 through 3.14, plus
+`mypy --strict` and the strict docs build on 3.12.
 
 The standalone repository carried sixteen — four hand-authored (`CI`, `Release`,
 `Release artifacts`, `Currency research`) and twelve rendered by `vibey-gh install`
@@ -411,8 +474,9 @@ pull request and the `CodeQL` scan.
 
 ### Troubleshooting
 
-- **`vibey-gh check` fails locally with "core.hooksPath is not .githooks"** — run
-  `vibey-gh install`.
+- **`vibey-gh check` fails locally with "core.hooksPath is not .githooks — run `vibey-gh setup`"** —
+  run `uv run vibey-gh setup` from the repository root; it installs the pre-commit framework's
+  hooks and then the provenance hooks.
 - **A managed workflow shows as "out of date"** — it was hand-edited; revert the edit and
   change `.vibey-gh.toml` instead, then run `vibey-gh install` again.
 - **CI is red on a fingerprint check after a `vibey-gh` upgrade** — this happened once: a
@@ -435,6 +499,20 @@ Contributions are accepted under the same license.
 vibey-skills was originally developed as `TheViziusGroup/vibe-engineering-skills` by Adam
 Matthew Steinberger while at The Vizius Group, and is republished here with the permission of
 The Vizius Group — see [NOTICE.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/NOTICE.md).
+
+## Where next
+
+- [Usage docs](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/usage.md):
+  every option of `vibey-skills install` and `marketplace`.
+- [The retrieval context engine](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/rag-context-engine.md):
+  how `index`, `search`, `packet` and `evaluate` work.
+- [ADR-0103](https://github.com/the-vibey-project/vibey/blob/develop/docs/architecture/decisions/0103-the-loop-capability-bundle.md):
+  how vibey's loops are given plugins from this marketplace.
+
+## Say it in one line
+
+vibey-skills is a catalogue of source-cited skills you can add to Claude Code with one
+marketplace command, or copy into any agent with `vibey-skills install`.
 
 ---
 

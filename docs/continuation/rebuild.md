@@ -3,6 +3,13 @@ description: The continuation prompt that reconstitutes vibey from any surviving
 ---
 # Rebuild
 
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** Use this prompt if the forge, the runner or the operator is
+> gone. The agent finds the most complete surviving copy (a clone, the newest `vibey-engine`
+> source distribution on PyPI, the book, or a fork), rebuilds it in a scratch directory on
+> Python 3.12+ and PostgreSQL 14+, runs the gates, and lists everything that now needs a
+> person. GitHub runs it weekly as a drill that publishes nothing.
+
 Reconstitute the project from whatever survives. Run automatically, this prompt is a
 **drill**: it rebuilds from the latest release's source distribution in a scratch directory
 and proves the result passes its own gates, without publishing anything.

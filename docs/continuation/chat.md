@@ -3,6 +3,13 @@ description: Talk to vibey's own agent inside GitHub — write /vibey in an issu
 ---
 # Chat
 
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** If you are the repository's owner, a member or a
+> collaborator, comment `/vibey <your question>` on an issue or pull request, or run the Chat
+> workflow from the Actions tab, and an open-weights model on a GitHub runner replies in a few
+> minutes. `/vibey act <request>` may open a draft pull request for a person to review. It
+> never merges, approves, releases or deletes.
+
 Talk to vibey's own agent without leaving GitHub. It runs on GitHub's runners with an
 open-weights model, reads the conversation it was called into, and replies there.
 
@@ -16,8 +23,11 @@ open-weights model, reads the conversation it was called into, and replies there
   a message, and optionally the number of an issue or pull request to answer in. Without a
   number, the reply is in the run's summary.
 
-It is slow by design: the model runs on a CPU (about three tokens a second), so a reply takes
-minutes, not seconds. It always replies — with an answer, or with the reason it could not.
+It is slow by design: the model, `qwen3:8b` (`scripts/continuation_prompts.toml` `[run]`),
+runs on a GitHub-hosted CPU runner, so a reply takes minutes, not seconds. Its speed on that
+runner has not been measured; the one measured figure, 2.8 tokens a second, is for the larger
+`gpt-oss:20b` (`docs/architecture/evidence/minimum-specs.json`). It always replies — with an
+answer, or with the reason it could not.
 
 ## What keeps it safe and alive
 
@@ -32,9 +42,10 @@ minutes, not seconds. It always replies — with an answer, or with the reason i
 - **The model job can change nothing.** It holds no write permission and no secret. A fresh
   runner, where no model ran, posts the reply and applies a change only through the shared
   guard that refuses any patch touching a workflow, the canon or the declared state.
-- **It survives the parts around it failing.** If the first model cannot be pulled it falls
-  back to the next declared one; if Ollama's installer is down it installs Ollama's own
-  release; if the model run fails or times out it still replies, with the reason. The weekly
+- **It survives the parts around it failing.** It tries each declared model in order, but
+  only one is declared (`qwen3:8b`), so if it cannot be pulled the model step fails loudly
+  rather than answer with a smaller model; if Ollama's installer is down it installs Ollama's own release;
+  if the model run fails or times out it still replies, with the reason. The weekly
   continuation lane keeps it enabled, and `scripts/continuation_prompts.py check` fails on
   every pull request if this lane is removed or loses any of these guards.
 

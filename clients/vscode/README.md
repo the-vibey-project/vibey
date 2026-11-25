@@ -1,37 +1,66 @@
 # krypton for VS Code
 
 > [!IMPORTANT]
-> **Work in progress — not a final product:** The `krypton` VS Code extension and the `vibey` engine are actively under development and not yet a finished product. APIs and features continue to evolve. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
->
-> **Bottom Line Up Front (BLUF) — How to install krypton in VS Code, VSCodium, or Cursor in 60 seconds (no coding experience needed):**
->
-> 1. **Install the `vibey` engine and `krypton` on your computer (one line in Terminal):**
->    ```sh
->    curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
->    vibey connect --yes
->    ```
-> 2. **Install the extension into your editor (pick Option A or Option B):**
->    - **Option A — Click-only (no Terminal):**
->      1. Download **`krypton-vscode-<version>.vsix`** from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (or [krypton-nightly](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly)).
->      2. In VS Code, Cursor, or VSCodium, open the **Extensions** view (**Cmd+Shift+X** on macOS, **Ctrl+Shift+X** on Linux).
->      3. Click the **`…` (three dots)** menu at the top right of the Extensions panel and choose **Install from VSIX…**.
->      4. Pick the downloaded `krypton-vscode-<version>.vsix` file.
->    - **Option B — One command in Terminal:**
->      ```sh
->      # In VSCodium or any Open VSX editor:
->      codium --install-extension the-vibey-project.krypton
->
->      # In VS Code (after downloading krypton-vscode-<version>.vsix from GitHub Releases):
->      code --install-extension ~/Downloads/krypton-vscode-*.vsix
->
->      # On macOS if 'code' is not on your PATH:
->      "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension ~/Downloads/krypton-vscode-*.vsix
->
->      # In Cursor:
->      cursor --install-extension ~/Downloads/krypton-vscode-*.vsix
->      ```
-> 3. **Open it:** Click the **krypton atom** icon on the left activity bar to open the chat-first krypton panel, or open VS Code Chat and type `@krypton /chat`.
-> 4. **Want the other krypton apps too (Desktop for macOS & Linux, Web, Android, iOS)?** See [docs/guides/install.md](../../docs/guides/install.md) and [docs/guides/downloads.md](../../docs/guides/downloads.md).
+> **Bottom Line Up Front (BLUF):** krypton 0.4.0 (`the-vibey-project.krypton`) lets you ask a
+> model on your own computer to change your project, on a copy, then **Review**, **Apply** or
+> **Discard** it; it also drives vibey projects through `@krypton` in the editor's chat. Install
+> vibey and Ollama, install this extension, then run **krypton: Ask the model to do a task**.
+> Tasks run stock `gpt-oss:20b` unless you set `vibey.model` (see [The model](#the-model)).
+
+**How to read this page.**
+
+**Daniel:** Where do I start?
+
+**Professor Feynman:** With *What you need*, then *Your first task*. After that this page is a
+lookup: find a command in *Every command* or a setting in *Every setting*, each with its
+default and an example you can paste. The guide on the documentation site tells the story.
+
+**Daniel:** Are `@krypton` and the panel's `/` different?
+
+**Professor Feynman:** No. They are the same commands, typed in two places.
+
+## Quick install
+
+1. **Install vibey** (one line in a terminal; it fetches uv and Python 3.12 if they are
+   missing). `--with-krypton` adds the `krypton` browser launcher; it is optional here.
+
+   ```sh
+   curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+   ```
+
+   `vibey connect --yes` is a separate, optional step: it registers vibey's MCP server with
+   Claude Code, Claude Desktop, Codex, Cursor, VS Code and Gemini CLI, and its ACP agent with
+   Zed, so those chat apps can drive vibey. This extension does not need it.
+2. **Install the extension**, either way:
+   - **Without a terminal:** download `krypton-vscode-<version>.vsix` from
+     [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (or
+     [krypton-nightly](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly)),
+     open the **Extensions** view (**Cmd+Shift+X** on macOS, **Ctrl+Shift+X** on Linux), click
+     the `…` menu at its top, choose **Install from VSIX…** and pick the file.
+   - **With a terminal:**
+
+     ```sh
+     # VSCodium or any Open VSX editor:
+     codium --install-extension the-vibey-project.krypton
+
+     # VS Code, after downloading the .vsix:
+     code --install-extension ~/Downloads/krypton-vscode-*.vsix
+
+     # macOS, if 'code' is not on your PATH:
+     "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension ~/Downloads/krypton-vscode-*.vsix
+
+     # Cursor:
+     cursor --install-extension ~/Downloads/krypton-vscode-*.vsix
+     ```
+3. **Open it:** click the **krypton atom** in the activity bar, or type `@krypton /chat` in the
+   editor's chat.
+
+The other krypton apps (desktop for macOS and Linux, web, Android, iOS) are in
+[docs/guides/install.md](../../docs/guides/install.md) and
+[docs/guides/downloads.md](../../docs/guides/downloads.md). vibey is pre-1.0; news is posted on
+the [Discord server](https://discord.gg/Qvu8aYnVS).
+
+## What it is
 
 **krypton** is vibey's face in your editor: the display name of this extension, and of every
 vibey app (sub-doctrine 9.e). Its extension id is `the-vibey-project.krypton`. The engine
@@ -39,9 +68,22 @@ underneath is still **vibey**, and the extension's settings (`vibey.*`) and comm
 (`vibey.*`) keep their names.
 
 Ask a model that runs **on your own computer** to make a change in your project, and watch
-every step it takes. There is no account and no cloud: the model is **gpt-oss:20b**, running in
+every step it takes. There is no account and no cloud on the default loop: the model runs in
 [Ollama](https://ollama.com) on your machine, driven by **vibey**, the conductor this extension
 belongs to.
+
+## The model
+
+The extension's tasks run **stock `gpt-oss:20b`** by default: `vibey.model`, else
+`$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b` (`packages/vibey-core/src/local-runner.ts`). It hands
+that model to gptossloop as `GPTOSSLOOP_MODEL`, and never reads `VIBEY_SOVEREIGN_MODEL`.
+
+The rest of vibey (the worker, DESIGN, DECOMPOSE, and gptossloop when vibey starts it) defaults
+to **Heretic v2 of GPT-OSS 20B**, `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`
+([ADR-0099](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0099-heretic-v2-of-gpt-oss-20b-is-the-sovereign-default-model/)).
+The two surfaces disagree today. To make editor tasks run the same model, and download one
+model instead of two, set `vibey.model` to that tag. Both builds share one architecture; the
+stock download is about 14 GB and the Heretic one about 12.1 GB.
 
 Nothing the model does touches your files until you say so. Each task works on a **copy** of
 your project, on a branch of its own. When it finishes, you **Review** the change, then
@@ -60,13 +102,15 @@ Tick these off once, in this order.
    - On Linux, run `curl -fsSL https://ollama.com/install.sh | sh`.
    - Windows is not supported yet ([#1097](https://github.com/the-vibey-project/vibey/issues/1097)).
 4. **vibey**, which brings the two programs the extension drives, `gptossloop` (the local agent)
-   and `vibey-skills` (context for plugins): `pip install vibey-engine`. It needs Python 3.12 or newer.
+   and `vibey-skills` (context for plugins). The one-line installer above is the tested path;
+   `uv tool install vibey-engine` installs the same package (Python 3.12 or newer).
    The same install brings `qwenloop`, the same agent on a Qwen model, which runs only once you
    switch it on in vibey
    ([ADR-0064](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0064-gptossloop-is-the-sovereign-engine/)).
-5. **The model, gpt-oss:20b.** It is about 14 GB, and the extension can download it for you
-   (step 4 below). It needs at least 24 GB of memory, and 32 GB is recommended; a 16 GB Mac
-   cannot run it
+5. **The model.** Stock `gpt-oss:20b` (about 14 GB) unless you set `vibey.model`, for example to
+   the Heretic v2 tag the rest of vibey uses (about 12.1 GB; see [The model](#the-model)). The
+   extension can download it for you (step 4 below). It needs at least 24 GB of memory, and
+   32 GB is recommended; a 16 GB Mac cannot run it
    ([system requirements](https://the-vibey-project.github.io/vibey/main/reference/system-requirements/)).
 
 ## Install the extension
@@ -75,26 +119,26 @@ From Open VSX, where it is listed as `the-vibey-project.krypton` (editors that r
 such as VSCodium, find it in their Extensions view):
 
 ```sh
-code --install-extension the-vibey-project.krypton
+codium --install-extension the-vibey-project.krypton
 ```
 
 That works in an editor whose extension gallery is Open VSX. Visual Studio Code's own
 Marketplace does not carry it, so in VS Code install the `.vsix` that every
 [release](https://github.com/the-vibey-project/vibey/releases) attaches,
-`krypton-vscode-<version>.vsix`:
+`krypton-vscode-<version>.vsix` (`krypton-vscode-0.4.0.vsix` for this version):
 
 ```sh
-code --install-extension krypton-vscode-0.3.0.vsix
+code --install-extension krypton-vscode-0.4.0.vsix
 ```
 
 If your Mac says `code: command not found`, use the full path instead:
 
 ```sh
-"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-vscode-0.3.0.vsix
+"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-vscode-0.4.0.vsix
 ```
 
 A `.vsix` you build yourself (`npx vsce package --no-dependencies` here) is named
-`krypton-0.3.0.vsix`; install it the same way.
+`krypton-<version>.vsix` (`krypton-0.4.0.vsix` for this version); install it the same way.
 
 You can also do it without a terminal: open the **Extensions** view, click the `…` menu at its
 top, choose **Install from VSIX…**, and pick the file.
@@ -112,7 +156,7 @@ to vibey on this network** once more.
    repository with at least one commit. The task will work on a copy of it.
 2. **Open krypton.** Click the krypton atom in the activity bar on the left.
 3. **Check your setup.** Open the Command Palette (**Cmd+Shift+P** on a Mac, **Ctrl+Shift+P**
-   elsewhere), type **krypton: Check my setup**, and press Enter. Each line says `ok`, `warn` or
+   elsewhere), type **krypton: Check my setup (doctor)**, and press Enter. Each line says `ok`, `warn` or
    `FAIL`. Every `FAIL` comes with a line that says what to do.
 4. **Start Ollama and fetch the model**, if the check asked you to. Run **krypton: Start Ollama**,
    then **krypton: Download the model**. It asks before it downloads anything.
@@ -134,8 +178,8 @@ to vibey on this network** once more.
   setting changes it), on a branch named `vibey/<words>-<id>`, starting from `HEAD` (or from
   `vibey.baseRef`). The extension refuses a storm home on storage your computer empties at
   restart, because the work would be lost.
-- **The model.** On sovereignloop, the default, `gptossloop` runs the task with gpt-oss:20b
-  through Ollama. If you switch `qwenloop` on in vibey, it can run tasks too, on the Qwen model
+- **The model.** On sovereignloop, the default, `gptossloop` runs the task through Ollama on
+  the model in `vibey.model` (stock gpt-oss:20b when it is empty; see [The model](#the-model)). If you switch `qwenloop` on in vibey, it can run tasks too, on the Qwen model
   its own config names (`qwen3:14b`); each reads only its own settings (`GPTOSSLOOP_*`,
   `QWENLOOP_*`) and its own config file. One task uses the model at a time
   (`vibey.maxConcurrentRuns`, default 1); the rest wait their turn.
@@ -158,10 +202,18 @@ to vibey on this network** once more.
 
 ## The first minute
 
-On first install, VS Code opens **Get started with krypton**, a five-step tour (it is also
-under **Help: Welcome** and in the Tasks view). It checks your setup, lets you pick a look, and
-asks for your first result, with a button on every step, so the first finished task is under a
-minute away once the model is downloaded.
+On first install, VS Code opens **Get started with krypton**, a six-step tour (it is also
+under **Help: Welcome** and in the Tasks view), with a button on every step:
+
+1. **Check your setup**
+2. **Light, Dark or System**
+3. **Your first result**
+4. **Start a whole project**
+5. **How hard it works**
+6. **Connect to vibey on this network**
+
+How long the first result takes depends on your computer and the model; once the model is
+downloaded and loaded, a short task is a few model turns.
 
 ## The task panel
 
@@ -185,6 +237,7 @@ minute away once the model is downloaded.
 
 | View | What it shows |
 |---|---|
+| **krypton** (`vibey.chatView`, in the secondary sidebar) | The chat-first panel ([ADR-0100](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces/)): type a task or a `/` command, follow a project, answer what it waits on. **krypton: Open krypton chat** (`/chat`) opens it. |
 | **Model** | Whether Ollama is answering, whether the model is downloaded, its context window, and the loop, effort and engine new tasks use. |
 | **Tasks** | Tasks this window started, and the finished ones, with Review, Apply and Discard. |
 | **Lanes** | Every loop running on this computer, whoever started it: a task, a batch, a terminal or a storm. It shows each one's turn, the tool it is running, its tokens, and how long it has run. |
@@ -212,9 +265,12 @@ to vibey on this network** (or `/connect studio.local`) uses it instead:
 
 1. It looks for a hub on this computer, then at the address you give, on port 8765 unless you
    name another.
-2. You pair once. Being on the same network proves nothing, so krypton asks for the key the
-   host gave you (the host's token, or a device key) and checks it against the hub before it
-   keeps it.
+2. You pair once. A hub on this computer is connected with its local token, read for you.
+   Elsewhere, being on the same network proves nothing, so krypton asks for a key and checks
+   it against the hub before it keeps it: a device key the host issued, or the host's token
+   (the content of the hub's token file, which grants every scope; prefer a device key).
+   krypton for VS Code does not claim the 6-digit code `vibey hub pair` shows; the krypton
+   apps' Pair screens do. For a hub to listen on the network, the host sets `[hub] lan = true`.
 3. The key goes in VS Code's secret storage, never in settings; `vibey.hubUrl` holds only the
    address. Projects, gates and budgets then come from the hub, and the status bar says
    **hub**. Tasks you start still run on this computer's model.
@@ -260,8 +316,9 @@ A paired hub takes precedence over it.
 Click **✨ krypton** in the status bar for every command, in groups. The same commands are in the
 Command Palette under **krypton:**, and in the task panel after a `/`.
 
-In VS Code's chat, type `@vibey` and your task to run one there, or a command, for example
-`@vibey /lanes` or `@vibey /budget add scope=day loop=paidloop dollars=5`.
+In VS Code's chat, type `@krypton` and your task to run one there, or a command, for example
+`@krypton /lanes` or `@krypton /budget add scope=day loop=paidloop dollars=5`. A bare number,
+such as `@krypton 1`, replies to the question a project is waiting on.
 
 ## Loops, efforts and engines
 
@@ -282,8 +339,11 @@ In VS Code's chat, type `@vibey` and your task to run one there, or a command, f
   SPEND**. **krypton: End unlimited spend** (or `/cap`) ends it in one action, at once.
 - **Engines and models** are listed by `vibey loops --json`. The extension knows none of them
   by itself. An engine the canon has repealed (by 8.b) while vibey still carries its code is
-  shown, greyed out, and never runs. With a vibey older than 3.0.0 there is no `vibey loops`. The extension then says so,
-  and runs sovereignloop with gptossloop on gpt-oss:20b.
+  shown, greyed out, and never runs. When `vibey loops --json` cannot be read (no `vibey`
+  found, or a build without `vibey loops`), **Check my setup** says
+  `degraded: vibey loops is not available`, and the extension runs sovereignloop with
+  gptossloop on the model in `vibey.model`. Reinstalling vibey with the one-line installer
+  fixes it.
 
 ## Budgets
 
@@ -363,7 +423,7 @@ force.
 
 ### Run
 
-| Command | Palette title | In the panel or after @vibey | Example |
+| Command | Palette title | In the panel or after @krypton | Example |
 |---|---|---|---|
 | `vibey.openChat` | Open krypton chat | `/chat` | `/chat` |
 | `vibey.ask` | Ask the model to do a task | `/ask <task>` | `/ask add a line to README.md that says how to run the tests` |
@@ -383,7 +443,7 @@ force.
 
 ### Loop & model
 
-| Command | Palette title | In the panel or after @vibey | Example |
+| Command | Palette title | In the panel or after @krypton | Example |
 |---|---|---|---|
 | `vibey.chooseLoop` | Choose the loop (sovereign or paid) | `/loop sovereign|paid` | `/loop sovereign` |
 | `vibey.chooseEffort` | Choose the effort | `/effort auto|TRIVIAL|LOW|STANDARD|HIGH|MAX` | `/effort auto` |
@@ -392,7 +452,7 @@ force.
 
 ### Lanes
 
-| Command | Palette title | In the panel or after @vibey | Example |
+| Command | Palette title | In the panel or after @krypton | Example |
 |---|---|---|---|
 | `vibey.showLanes` | Show running lanes | `/lanes` | `/lanes` |
 | `vibey.openLane` | Watch a lane | `/watch <lane id>` | `/watch 1a2b3c4d` |
@@ -401,7 +461,7 @@ force.
 
 ### Projects & gates
 
-| Command | Palette title | In the panel or after @vibey | Example |
+| Command | Palette title | In the panel or after @krypton | Example |
 |---|---|---|---|
 | `vibey.refresh` | Refresh | `/refresh` | `/refresh` |
 | `vibey.newProject` | Start a new project | `/new <name> [what to build]` | `/new greeter a web page that greets the visitor by name` |
@@ -419,7 +479,7 @@ force.
 
 ### Budgets
 
-| Command | Palette title | In the panel or after @vibey | Example |
+| Command | Palette title | In the panel or after @krypton | Example |
 |---|---|---|---|
 | `vibey.showBudgets` | Show budgets | `/budget [list]` | `/budget list` |
 | `vibey.addBudget` | Add a budget | `/budget add scope=run|day|month loop=any|sovereignloop|paidloop [engine=ID] dollars=N turns=N minutes=N` | `/budget add scope=day loop=paidloop dollars=5` |
@@ -430,10 +490,19 @@ force.
 
 ### Connect & look
 
-| Command | Palette title | In the panel or after @vibey | Example |
+| Command | Palette title | In the panel or after @krypton | Example |
 |---|---|---|---|
 | `vibey.connectHub` | Connect to vibey on this network | `/connect [address]` | `/connect studio.local` |
 | `vibey.connectMcp` | Connect a chat app or editor (MCP) | `/mcp [client]` | `/mcp vscode` |
+
+`/mcp` runs `vibey connect` for the client you pick. `vibey connect --yes` in a terminal does
+every client at once: Claude Code, Claude Desktop, Codex, Cursor, VS Code and Gemini CLI over
+MCP (`vibey mcp`), and Zed over ACP (`vibey acp`,
+[ADR-0101](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0101-the-acp-agent-and-self-installing-services/)).
+Claude Code and VS Code entries are written in the current folder.
+
+| Command | Palette title | In the panel or after @krypton | Example |
+|---|---|---|---|
 | `vibey.disconnectHub` | Disconnect from the hub | `/disconnect` | `/disconnect` |
 | `vibey.startHub` | Start the vibey hub on this computer | `/hub start` | `/hub start` |
 | `vibey.stopHub` | Stop the vibey hub on this computer | `/hub stop` | `/hub stop` |
@@ -443,14 +512,14 @@ force.
 
 ### Ollama
 
-| Command | Palette title | In the panel or after @vibey | Example |
+| Command | Palette title | In the panel or after @krypton | Example |
 |---|---|---|---|
 | `vibey.startOllama` | Start Ollama | `/start-ollama` | `/start-ollama` |
 | `vibey.pullModel` | Download the model | `/pull [model]` | `/pull gpt-oss:20b` |
 
 ### Doctor
 
-| Command | Palette title | In the panel or after @vibey | Example |
+| Command | Palette title | In the panel or after @krypton | Example |
 |---|---|---|---|
 | `vibey.doctor` | Check my setup (doctor) | `/doctor` | `/doctor` |
 | `vibey.showMenu` | Show every command | `/help` | `/help` |
@@ -462,14 +531,14 @@ Change them in **Settings** (search for `vibey`), or in `settings.json`.
 | Setting | Default | What it does |
 |---|---|---|
 | `vibey.cliPath` | `""` | The `vibey` program to run. Empty: the first `vibey` on your PATH. **krypton: Check my setup** prints the one it found and its version. |
-| `vibey.gptossloopPath` | `""` | The `gptossloop` program, the local engine that runs a task on gpt-oss:20b by default. Empty: the first `gptossloop` on your PATH. It ships with vibey (`pip install vibey-engine`). |
+| `vibey.gptossloopPath` | `""` | The `gptossloop` program, the local engine that runs a task on the model in `vibey.model`. Empty: the first `gptossloop` on your PATH. It ships with vibey (the `vibey-engine` package). |
 | `vibey.qwenloopPath` | `""` | The `qwenloop` program: the same local runner on a Qwen model, which runs only once vibey switches it on (`VIBEY_FEATURE_QWENLOOP=1`, ADR-0064). Empty: the first `qwenloop` on your PATH. |
 | `vibey.ollamaPath` | `""` | The `ollama` program, used only to start a server with `ollama serve` and to show a download command. Empty: the first `ollama` on your PATH. |
 | `vibey.gitPath` | `""` | The `git` program. Empty: the first `git` on your PATH. |
 | `vibey.vibeySkillsPath` | `""` | The `vibey-skills` program that builds context packets for the **Plugins** menu. Empty: the first `vibey-skills` on your PATH. |
 | `vibey.ollamaUrl` | `""` | Where Ollama listens, in root form without `/v1`. Empty: `$VIBEY_OLLAMA_URL`, else `http://127.0.0.1:11434`. |
 | `vibey.ollamaAppPath` | `"/Applications/Ollama.app"` | macOS only: the Ollama app **Start Ollama** opens when it exists. Otherwise `ollama serve` is started. |
-| `vibey.model` | `""` | The model gptossloop tasks run on. Empty: `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`. qwenloop is not handed this: its own config chooses (`qwen3:14b`), unless you name a model with the engine, `qwenloop/qwen3:14b`. |
+| `vibey.model` | `""` | The model gptossloop tasks run on. Empty: `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`. The rest of vibey defaults to `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`; set that here to match it ([The model](#the-model)). qwenloop is not handed this: its own config chooses (`qwen3:14b`), unless you name a model with the engine, `qwenloop/qwen3:14b`. |
 | `vibey.loop` | `"sovereignloop"` | Which loop runs tasks. `paidloop` works only after you declare it once (**Choose the loop**), with a daily or monthly dollar budget. |
 | `vibey.effort` | `"auto"` | How hard the engine works (vibey's own effort levels). `auto` starts at **Base effort** and climbs one step each time a task fails, as vibey's escalation ladder does, never past a budget. `ULTRA` has no turn limit and is shown in its own colour with a flame. |
 | `vibey.baseEffort` | `"LOW"` | Where `auto` effort starts: vibey's BUILD phase starts at `LOW`. |
@@ -480,12 +549,14 @@ Change them in **Settings** (search for `vibey`), or in `settings.json`.
 | `vibey.baseRef` | `""` | The git branch or commit a task's copy starts from. Empty: whatever you have checked out (`HEAD`). |
 | `vibey.stormHome` | `""` | Where task copies, plans and records are kept. Empty: `$VIBEY_STORM_HOME`, else `~/git/vibey-storm` on macOS and `$XDG_DATA_HOME/vibey/storm` (or `~/.local/share/vibey/storm`) on Linux. A folder your computer empties at restart is refused (sub-doctrine 10.h). |
 | `vibey.modelLockPath` | `""` | A lock directory that keeps runs on the same computer from sharing the model at once, including runs started from a terminal with `vibey-vscode`. Empty: the lock the computer declares with `VIBEY_OLLAMA_LOCK` (the one vibey-gh and storm tooling share), else `.ollama-lock` in the storm home. A lock held by something that does not say who is never broken. |
-| `vibey.maxConcurrentRuns` | `1` | How many tasks may use one model at the same time. Further tasks wait in line. `1` is the measured best on a 24 GB Mac: at two, answers drifted from what one run gives (structural fidelity 0.82, under the 0.95 floor; #1114, sub-doctrine 8.c). |
+| `vibey.maxConcurrentRuns` | `1` | How many tasks may use one model at the same time. Further tasks wait in line. `1` is the measured best on a 24 GB Mac: at two, answers drifted from what one run gives (structural fidelity 0.82, under the 0.95 floor; #1114, sub-doctrine 8.c, ADR-0058). Measured on stock gpt-oss:20b; the figures are recorded in the issue, not in this repository. |
 | `vibey.refreshSeconds` | `30` | How often the Model, Projects and Gates views refresh themselves. |
 | `vibey.pollMilliseconds` | `500` | How often a running task's event log is read for new lines. |
-| `vibey.stuckHintMinutes` | `5` | After this many minutes without a new event, a running task shows a hint. Nothing is ever stopped for being slow: on a 24 GB Mac one turn of gpt-oss:20b took 16.5 s typically and 112.6 s at the 95th percentile. |
+| `vibey.stuckHintMinutes` | `5` | After this many minutes without a new event, a running task shows a hint. Nothing is ever stopped for being slow: on a 24 GB Mac one turn of stock gpt-oss:20b took 16.5 s typically and 112.6 s at the 95th percentile (a measurement cited from the project's issues, not stored in this repository). |
 | `vibey.forceStopAfterSeconds` | `120` | How long a graceful **Stop** is given before **Force stop** is offered. A force stop is only ever a person's choice, and it is written in the journal. |
 | `vibey.lanesRecentMinutes` | `60` | The Lanes view lists lanes with an event in this many minutes. |
+| `vibey.followPollSeconds` | `5` | How often krypton looks at a project it is following, to tell you what changed (`/new`, `/reply`, `/resume` and `/follow`). |
+| `vibey.followMinutes` | `30` | How long one follow keeps watching before it hands back. The project keeps running; `/follow` picks it up again. |
 | `vibey.skillsBudget` | `6000` | The token budget of a vibey-skills context packet (vibey's own bounds: 1,000 to 32,000). |
 | `vibey.budgetInputTokensPerTurn` | `20000` | Input tokens per turn assumed when projecting a paid run's cost, until this machine has measured the engine's own. |
 | `vibey.budgetOutputTokensPerTurn` | `2000` | Output tokens per turn assumed when projecting a paid run's cost, until this machine has measured the engine's own. |
@@ -502,6 +573,12 @@ Change them in **Settings** (search for `vibey`), or in `settings.json`.
   first. Point `vibey.cliPath` and `vibey.gptossloopPath` (or `vibey.qwenloopPath`) at the
   ones you want. **krypton: Check my setup** prints the path and version of every program it uses.
 - **"Ollama is not answering".** Run **krypton: Start Ollama**. It never starts a second server.
+- **"`<model>` is not downloaded; run: ollama pull `<model>`".** The model `vibey.model` names
+  (stock gpt-oss:20b when empty) is not in Ollama. Run **krypton: Download the model**.
+- **Two ~13 GB models on disk.** The editor runs stock gpt-oss:20b and the rest of vibey runs
+  Heretic v2. Set `vibey.model` to the Heretic tag ([The model](#the-model)).
+- **"degraded: vibey loops is not available".** The extension cannot read `vibey loops --json`.
+  Reinstall vibey with the one-line installer.
 - **The context window is "unknown".** It is known only once the model is loaded, at the first
   task. If the check later says it is too small, it names the setting to raise.
 - **"refused: this work would be kept on storage the operating system empties".** Choose a

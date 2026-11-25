@@ -64,7 +64,7 @@ When a project parks on a human gate:
 1. Read the gate's `kind`, `prompt`, and `options` from `vibey_gates`.
 2. Present the decision clearly to the user in chat (or apply the user's stated decision).
 3. Call `vibey_answer_gate(gate_id="<uuid>", answer={...})`:
-   - Design interview gate: `{"answers": {...}}` or `{"defaults": true}`
+   - Design interview gate: `{"answers": {...}}` or `{"accept_defaults": true}`
    - Review verdict gate: `{"verdict": "accept"}` or `{"verdict": "changes", "feedback": "..."}`
    - Choice gate: `{"choice": "<option>"}`
 

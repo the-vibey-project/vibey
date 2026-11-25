@@ -1,7 +1,15 @@
 ---
-description: "The continuation prompt the backlog killer runs every 20 minutes: take this run's backlog item and land its smallest shippable, tested slice as one draft pull request."
+description: "The continuation prompt the backlog killer runs once per 60-minute slot, on the operator's own machine and paused since 2026-10-29: land the smallest shippable, tested slice of one opted-in issue as a draft pull request."
 ---
 # Work the backlog
+
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** This prompt hands an agent one backlog issue and asks for
+> the smallest tested slice of it, as one draft pull request. The lane that runs it,
+> `backlog-killer.yml`, is **paused** (`[backlog_killer] enabled = false` in
+> `scripts/daily_lanes.toml`, since 2026-10-29, at the operator's request). When it runs, it
+> runs on the operator's own machine and picks only trusted issues labelled
+> `good first issue`. You can still paste the prompt into your own agent by hand.
 
 Take the one open issue the backlog killer picked for this run and move it forward by the
 smallest slice that ships on its own: tested, reviewed, and honest about what is left.
@@ -15,18 +23,47 @@ smallest slice that ships on its own: tested, reviewed, and honest about what is
 - **Lanes it keeps usable:** [Backlog killer](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-killer.yml), [Backlog splitter](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-splitter.yml).
 <!-- END GENERATED continuation:state -->
 
+The generated line above says "Mode when GitHub runs it daily". For this prompt, "daily"
+means a scheduled lane names it (the backlog killer), not that it runs once a day, and it
+does not run on a GitHub-hosted runner: see [Where it runs](#where-it-runs).
+
 ## How the issue is chosen
 
 `scripts/backlog_killer.py pick` reads the open backlog and picks only issues opened by an
-author the repository trusts (`trusted_associations`: anyone can open an issue on a public
-repository, and the pick becomes an agent's task). It skips every issue that is held for the
-operator (`never_act`), already named by an open pull request, filed by a lane's own
-automation, a self-closing tracker, or labelled for a person or a storm lane. It ranks what is
-left by the operator's own priority label, oldest first, and rotates through the first
-`window` of them by run slot, one slot every `interval_minutes` (20; `scripts/daily_lanes.toml`
-`[backlog_killer]`), and `backlog-killer.yml` runs once per slot (each run waits for the next slot and dispatches the following one; the cron is only a watchdog, ADR-0083). Nothing is stored between
-runs: the pick is a function of the backlog and the slot, and an issue a run has opened a draft
-for is in flight and leaves the window.
+author the repository trusts (`trusted_associations` = `OWNER`, `MEMBER`, `COLLABORATOR`:
+anyone can open an issue on a public repository, and the pick becomes an agent's task). The
+pick is **opt-in**: only an issue carrying one of `agent_labels` (`good first issue`) is
+picked, and only when its body is at most `max_issue_chars` (4000) characters. The one
+exception is a slice the backlog splitter cut from a trusted issue: it carries
+`vibey-gh:split-child`, was filed by `github-actions[bot]`, and names an open parent a trusted
+person wrote, so it is workable without the label (ADR-0083).
+
+It skips every issue that is held for the operator (`never_act` in
+`scripts/backlog_expectations.json`), already named by an open pull request, filed by a lane's
+own automation, a self-closing tracker, or labelled for a person or a storm lane
+(`skip_labels`). It ranks what is left by the operator's own priority label
+(`vibey-gh:priority-critical` to `-low`), oldest first, and rotates through the first `window`
+(7) of them by run slot, one slot every `interval_minutes` (60; `scripts/daily_lanes.toml`
+`[backlog_killer]`). `backlog-killer.yml` runs once per slot: each run waits for the next slot
+and dispatches the following one, up to `chain_max_links` (48), and the cron (every two hours)
+is only a watchdog that restarts a chain when none is alive (ADR-0083). Nothing is stored
+between runs: the pick is a function of the backlog and the slot, and an issue a run has
+opened a draft for is in flight and leaves the window.
+
+## Where it runs
+
+This is the one prompt that does not run on a GitHub-hosted runner (ADR-0083, amended
+2026-10-09). `scripts/continuation_prompts.toml` `[run.sovereign]` sends it to the operator's
+own machine (`runs_on = ["self-hosted", "vibey-local-vibey"]`), where it runs through
+gptossloop on `gpt-oss:20b`, with up to 120 turns and a 120-minute ceiling. The job is a
+container with no route out except the egress gate (see `docs/runbooks/sovereign-review-runner.md`).
+It runs only while the machine's heartbeat (`refs/vibey-gh/sovereign-heartbeat`) is under 15
+minutes old; otherwise the prompt is left out of the run, never queued and never moved to a
+hosted runner.
+
+The lane is paused: `enabled = false` stops the pick finding any issue, so nothing is
+dispatched and the watchdog works nothing either. Setting it back to `true` is the operator's
+decision.
 
 ## The prompt
 

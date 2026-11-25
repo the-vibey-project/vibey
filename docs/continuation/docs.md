@@ -3,6 +3,13 @@ description: "The continuation prompt the daily documentation updater runs: find
 ---
 # Keep the documentation true
 
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** Use this prompt to correct one statement in the
+> documentation, the paper or the book that the code now contradicts, with the evidence that
+> it was wrong. The daily documentation updater (`docs-updater.yml`, 21:07 UTC) runs every
+> generator first, without a model, and then dispatches this prompt. One proven correction per
+> run, as a draft pull request.
+
 Every generated part of the documentation, the paper and the book is re-derived each day
 without a model. What is left is prose a person wrote, which goes stale silently when the code
 moves on. Correct one such statement a day, with the evidence that it was wrong.

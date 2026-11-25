@@ -1,30 +1,96 @@
 ---
-description: The ready-built files attached to every vibey release, for each user interface and platform, with what is signed and how to install each.
+description: The ready-built files attached to every vibey release, for each krypton app and platform, how to check a download, what is signed, and how to install each.
 ---
 
-# Downloads
+# Download a krypton app and check it
 
 > [!IMPORTANT]
-> **Work in progress — not a final product:** `vibey` and all `krypton` releases are pre-release development builds and not a final product. Binaries and packages are actively evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
->
-> **Bottom Line Up Front (BLUF) — Which file to download for your device and how to install it in seconds:**
->
-> Krypton and vibey are the completely free, censorship-free Claude Code and Codex killer designed to replace both. Writing code the way a principal software engineer does — delivering rigorous, tested code without slop, completely free of charge — it represents autonomous AGI with superintelligence coming soon. Every release on [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (and the daily [`krypton-nightly`](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly) build) attaches ready-to-install files for every krypton interface. Pick your platform below:
->
-> | Your device / app | File to download from [Releases](https://github.com/the-vibey-project/vibey/releases) | Exact install steps (no coding experience required) |
-> |---|---|---|
-> | **One-line installer (macOS & Linux)** | *(None — runs directly from Terminal)* | Open **Terminal** and run:<br>`curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh \| sh -s -- --with-krypton`<br>Then run `vibey connect --yes` to plug into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI. |
-> | **Mac (Apple silicon M1/M2/M3/M4/M5, macOS 15+)** — *krypton desktop* | `krypton-desktop-<version>-macos-arm64.dmg` | 1. Double-click the `.dmg` and drag **krypton** to **Applications**.<br>2. Open **Terminal** and run: `xattr -dr com.apple.quarantine /Applications/krypton.app` (or double-click **krypton**, then click **Open Anyway** in **System Settings → Privacy & Security**).<br>3. Open **krypton** from **Applications**. |
-> | **Linux (Any distro: Ubuntu, Fedora, Arch, Mint)** — *krypton desktop (Flatpak)* | `krypton-desktop-<version>-linux-x86_64.flatpak` *(Intel/AMD)* or `...-aarch64.flatpak` *(ARM64)* | In Terminal, run:<br>`flatpak install --user ~/Downloads/krypton-desktop-*-linux-*.flatpak`<br>Launch with: `flatpak run io.github.the_vibey_project.krypton` |
-> | **Linux (Ubuntu 24.04+ native)** — *krypton desktop (tarball)* | `krypton-desktop-<version>-linux-x86_64.tar.gz` *(Intel/AMD)* or `...-aarch64.tar.gz` *(ARM64)* | In Terminal, run:<br>`sudo apt update && sudo apt install -y libgtk-4-1 libadwaita-1-0 libsoup-3.0-0 libjson-glib-1.0-0 libavahi-client3 libavahi-glib1 glib-networking`<br>`sudo tar -xzf ~/Downloads/krypton-desktop-*-linux-*.tar.gz -C /`<br>Launch with: `krypton-desktop` |
-> | **VS Code, VSCodium & Cursor (macOS & Linux)** — *krypton extension* | `krypton-vscode-<version>.vsix` *(or install from Open VSX)* | **No Terminal:** In VS Code / Cursor / VSCodium, open **Extensions** (`Cmd+Shift+X` / `Ctrl+Shift+X`) → click **`…`** at top right → **Install from VSIX…** → pick the `.vsix` file.<br>**With Terminal:** `code --install-extension ~/Downloads/krypton-vscode-*.vsix` (or `codium --install-extension the-vibey-project.krypton`). |
-> | **Web Browser (Safari, Chrome, Firefox, Edge)** — *krypton web app* | `krypton-web-<version>.tar.gz` | In Terminal, run:<br>`mkdir -p ~/krypton-web && tar -xzf ~/Downloads/krypton-web-*.tar.gz -C ~/krypton-web && python3 -m http.server 8000 -d ~/krypton-web`<br>Then open `http://localhost:8000` in your browser. |
-> | **Android Phone or Tablet** — *krypton mobile app* | `krypton-android-<version>.apk` | Download the `.apk` on your Android device, tap it in **Downloads**, allow **Install unknown apps** if prompted, and tap **Install** (or from a computer: `adb install krypton-android-<version>.apk`). |
-> | **iPhone or iPad (iOS)** — *krypton mobile app* | `krypton-ios-<version>.ipa` *(or Expo Go)* | Distributed via Apple **TestFlight / App Store** from the signed `.ipa` when `EXPO_TOKEN` is set; or run immediately on any iPhone with **Expo Go** (`cd clients/app && npm ci && npx expo start`). |
-> | **Browser Launcher (`krypton` CLI)** | `krypton_app-<version>-py3-none-any.whl` *(or PyPI)* | `uv tool install krypton-app` (or `uv tool install ./krypton_app-<version>-py3-none-any.whl`), then run `krypton`. |
-> | **Engine, Runners & TUI (`vibey` CLI)** | `vibey_engine-<version>-py3-none-any.whl` *(or PyPI)* | `uv tool install vibey-engine` (or `uv tool install ./vibey_engine-<version>-py3-none-any.whl`), then run `vibey doctor`. |
->
-> Need even more detail? Read the complete beginner walkthrough in [Install, copy, reinstall, uninstall](install.md).
+> **Bottom Line Up Front (BLUF):** Every vibey release on
+> [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) attaches a ready-built
+> file for each krypton app (desktop, editor extension, phone, browser) plus `SHA256SUMS` and a
+> build-provenance attestation. Find your file in [the table](#what-each-release-carries),
+> download it, check it with one command, then install it. A few minutes, plus the download.
+> vibey itself installs with the one command on [Install](install.md).
+
+This page is for anyone choosing which file to download. The step-by-step install for each
+platform, and what each app needs on the computer that runs the hub, is on
+[Install](install.md#the-krypton-apps-platform-by-platform). Windows is not a supported platform,
+so nothing here is built for it.
+
+## The lesson
+
+Daniel had two files in his Downloads folder with nearly the same name and was not sure which
+one he had clicked.
+
+**Daniel:** Professor, the release page has a file called `SHA256SUMS`, and the download page
+talks about attestations and signatures. Are those three names for one thing?
+
+**Professor Feynman:** Three different things. Think of a parcel. The checksum is a list, sent
+separately, of exactly what should be in the box. You unpack and compare. If one item differs,
+you know the parcel was damaged or swapped on the way.
+
+**Daniel:** And the attestation?
+
+**Professor Feynman:** That is the delivery note from the factory, stamped by the carrier: this
+box was packed by this machine, from this order, on this day. It tells you where the file came
+from. GitHub stamps it, so you can check it with GitHub's own tool.
+
+**Daniel:** Then a signature is the same as the delivery note?
+
+**Professor Feynman:** No, and that is the gap worth closing. A signature is the maker's own
+seal, which your computer itself checks before it opens the box: Apple's for a Mac app, Google's
+or a store's for a phone app. An attestation says where a file came from; it does not make your
+Mac trust it. That is why the macOS app, which carries only an ad-hoc seal today, still needs you
+to say "open anyway" once.
+
+**Daniel:** So the checksum says the file is unchanged, the attestation says which build made
+it, and the signature is what my computer checks before it runs it.
+
+**Professor Feynman:** Exactly. And the table on this page says, for every file, which seal it
+has, so nothing is promised that is not there. The picture stops in one place: a parcel's list
+travels in a separate envelope, and `SHA256SUMS` sits on the same release page, so it proves the
+download is intact, not that the page itself is honest. The attestation covers that.
+
+## Do it
+
+1. **Find your file** in [the table below](#what-each-release-carries). `<version>` is that
+   app's own version (0.4.0 at the time of writing).
+
+2. **Download it and `SHA256SUMS`** from the same release on
+   [GitHub Releases](https://github.com/the-vibey-project/vibey/releases), into one folder.
+
+3. **Check it.** In that folder:
+
+   ```bash
+   shasum -a 256 --check --ignore-missing SHA256SUMS   # macOS
+   sha256sum --check --ignore-missing SHA256SUMS       # Linux
+   ```
+
+   You should see your file's name followed by `OK`. Anything else means the file is damaged or
+   not the release's: download it again.
+
+4. **Optionally, check where it came from**, with the GitHub CLI:
+
+   ```bash
+   gh attestation verify krypton-desktop-<version>-linux-x86_64.flatpak --repo the-vibey-project/vibey
+   ```
+
+   You should see that the attestation verified against the `the-vibey-project/vibey` repository.
+
+5. **Install it** with the steps on [Install](install.md#the-krypton-apps-platform-by-platform),
+   or the one-line install in the table's last column.
+
+## Daniel's teach-back
+
+**Daniel:** Each release carries one file per app and platform, plus `SHA256SUMS`. I check my
+download against `SHA256SUMS` and look for `OK`. If I want to know which build made it, I verify
+its attestation with `gh attestation verify`. And the Signing column tells me whether my computer
+will trust the file by itself, or whether I have to confirm it once, as with the Mac app.
+
+**Professor Feynman:** Right. One more: the iOS file is in the table but cannot be installed by
+opening it, and the web bundle cannot reach a hub today. The notes under the table say why.
+
+## The details
 
 Every vibey release on GitHub carries ready-built files for each user interface, on each
 platform the project supports. They are attached to the release's page under
@@ -33,19 +99,18 @@ Each file is built from the released commit by
 [`release-binaries.yml`](https://github.com/the-vibey-project/vibey/blob/develop/.github/workflows/release-binaries.yml)
 after the release has been published to PyPI.
 
-PyPI stays the main way to install vibey itself (see the
-[README's install section](https://github.com/the-vibey-project/vibey#install)). The Python files
-here are the same bytes PyPI serves, attached so that one release page has everything.
+The Python files here (the `vibey-engine` and `krypton-app` wheels and source distributions) are
+the same bytes PyPI serves, attached so that one release page has everything. The usual way to
+install vibey is the one command on [Install](install.md), which installs from PyPI.
 
-Windows is not a supported platform, so nothing here is built for it.
-
-As declared for 3.4.0, a release carries thirteen files and `SHA256SUMS`: four Linux
-builds of the desktop client and its macOS `.dmg`, the web bundle, the Android and iOS
-packages, the VS Code extension, and the wheel and source distribution of each Python
-package. The iOS package is built only while its credential is set, so without it there are
-twelve. 3.3.0, the first release to attach any, carried eleven; the macOS and iOS builds are
-new in 3.4.0. The table below is the declaration, and it is generated, so it is the one to
-trust if this paragraph ever disagrees with it.
+A release carries thirteen files and `SHA256SUMS`: four Linux builds of the desktop client and
+its macOS `.dmg`, the web bundle, the Android and iOS packages, the VS Code extension, and the
+wheel and source distribution of each of the two Python packages. The iOS package is built only
+while its credential is set, so without it there are twelve. `vibey-v0.4.0`, the latest release,
+carries all thirteen. The version numbers were reset to 0.x in November 2026 (#1898); under the
+retired 3.x numbering, 3.3.0 was the first release to attach any files (eleven), and 3.4.0 added
+the macOS and iOS builds. The table below is the declaration, and it is generated, so it is the
+one to trust if this paragraph ever disagrees with it.
 
 ## What each release carries
 
@@ -95,7 +160,22 @@ Every file is listed in `SHA256SUMS` beside it, with its SHA-256, and carries a 
 - **krypton desktop, macOS, Intel**: Homebrew no longer publishes Intel macOS bottles of the GTK 4 stack: gtk4 4.24, glib 2.90, libadwaita 1.10, librsvg, cairo and pango offer Apple-silicon bottles only. An Intel build would compile all of it from source, on a platform Homebrew no longer supports, and GitHub's last Intel macOS runner (`macos-15-intel`) retires in August 2027. Apple-silicon Macs run the arm64 build; Intel Macs cannot, because Rosetta translates Intel code to Apple silicon and not the other way.
 <!-- END GENERATED release:downloads -->
 
-## The nightly
+### Two notes on the generated table
+
+- **The web bundle cannot reach a hub as the table installs it.** Served by
+  `python3 -m http.server` on its own address, the page cannot read the hub's answers: the hub
+  sends no cross-origin (CORS) headers, by design (`src/vibey/infrastructure/hub/app.py`), and
+  it does not serve the web app from its own address. We have not run it end to end; this is
+  what the code says. Use krypton desktop or the VS Code extension instead
+  ([Install: the web app](install.md#the-web-app)). The install line above comes from
+  `scripts/release_binaries.toml`, which is where it will change.
+- **The iOS file cannot be installed from the release.** The release workflow submits it to no
+  store, so there is no TestFlight or App Store listing. Running the app on an iPhone today means
+  Expo Go from a copy of the repository ([Install](install.md#the-krypton-apps-platform-by-platform)).
+  The phone app also cannot pair with a code yet; see
+  [Install: phone and tablet](install.md#phone-and-tablet).
+
+### The nightly
 
 Every night something the interfaces ship from has changed on `develop` (anything under
 `clients/`, `packages/vibey-core/` or the root npm manifests), the same builders run on the
@@ -107,30 +187,17 @@ build-provenance attestation as a versioned release, so it is checked the same w
 file is signed exactly as a release's is, by whichever credentials the repository holds. A
 target that needs a credential the repository lacks is left out of the nightly without opening
 a tracking issue; the versioned release keeps that issue. A night when nothing changed builds
-nothing. To build one now, run
-**Release binaries** from the Actions tab on `develop` with *nightly* ticked (ADR-0084).
+nothing. To build one now, run **Release binaries** from the Actions tab on `develop` with
+*nightly* ticked
+([ADR-0084](../architecture/decisions/0084-krypton-nightly.md)).
 
-## Checking a download
+### An attestation is not a signature
 
-Each release carries `SHA256SUMS`, which lists every file with its SHA-256. In the folder you
-downloaded into, run:
+An attestation records which workflow run, from which commit, produced the file. It shows where
+a file came from; it is not a code signature, and it does not make your operating system trust
+the file. The Signing column says which files are signed and with what.
 
-```bash
-sha256sum --check --ignore-missing SHA256SUMS      # Linux
-shasum -a 256 --check --ignore-missing SHA256SUMS  # macOS
-```
-
-Each file also carries a GitHub build-provenance attestation. It records which workflow run,
-from which commit, produced the file. To check one with the GitHub CLI:
-
-```bash
-gh attestation verify krypton-desktop-<version>-linux-x86_64.flatpak --repo the-vibey-project/vibey
-```
-
-An attestation shows where a file came from. It is not a code signature. The Signing column
-above says which files are signed and with what.
-
-## Where the list comes from
+### Where the list comes from
 
 The table above is generated from
 [`scripts/release_binaries.toml`](https://github.com/the-vibey-project/vibey/blob/develop/scripts/release_binaries.toml).
@@ -142,4 +209,29 @@ That file declares each target as one of three kinds:
 - **not supported**, with the reason.
 
 The release workflow builds from the same file. `python scripts/release_binaries.py check`
-fails when the workflow, this page and the file disagree.
+fails when the workflow, this page and the file disagree
+(`tests/meta/test_release_binaries.py` runs it in CI).
+
+## When it goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| `shasum` or `sha256sum` prints `FAILED` for your file | The download is damaged, incomplete, or not the release's file. | Delete it and download it again from the release page. |
+| `SHA256SUMS: No such file or directory` | `SHA256SUMS` is not in the folder you ran the command in. | Download `SHA256SUMS` from the same release into the same folder. |
+| `no file was verified`, or nothing at all about your file | Your file's name differs from the release's (a browser may add ` (1)`), so the list does not name it. | Rename it to the exact name in the release, or download it again into an empty folder. |
+| macOS says krypton "cannot be opened" or is damaged | Gatekeeper's quarantine flag on an app that is not notarised. | `xattr -dr com.apple.quarantine /Applications/krypton.app`, or **Open Anyway** in **System Settings → Privacy & Security**. |
+| The iOS file will not open on an iPhone | An `.ipa` is not installed by opening it, and this one is listed in no store. | Use Expo Go from a copy of the repository ([Install](install.md#the-krypton-apps-platform-by-platform)). |
+| The web app loads but never shows your projects | The hub refuses cross-origin pages. | Use krypton desktop or the VS Code extension ([Install: the web app](install.md#the-web-app)). |
+| A file for your platform is missing from a release | It needs a credential the repository did not hold, or the platform is not supported. | See the two lists under the table; the nightly may carry it. |
+
+## Where next
+
+- [Install](install.md): the one command for vibey itself, and every app's install steps.
+- [Let another LLM drive vibey](drive-from-an-llm.md): use Claude Code or another chat tool
+  instead of an app.
+- [VS Code extension](vscode-extension.md): what the editor extension does once installed.
+
+## Say it in one line
+
+Each vibey release attaches a file per krypton app plus SHA256SUMS; check your download for OK,
+and the Signing column tells you what your computer will trust by itself.

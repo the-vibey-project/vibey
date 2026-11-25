@@ -1,40 +1,72 @@
+---
+description: "Reference for krypton desktop, vibey's C and GTK 4 app for macOS and Linux: install, what each page does, shortcuts, pairing, and how to build it."
+---
+
 # krypton desktop
 
 > [!IMPORTANT]
-> **Work in progress — not a final product:** `krypton desktop` is actively being developed and is not a final product. Features, UI, and packages are still evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
->
-> **Bottom Line Up Front (BLUF) — How to install krypton desktop on macOS and Linux (no coding experience needed):**
->
-> First, make sure the `vibey` engine is installed on your computer (`curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton`). Then pick your operating system below:
->
-> - **macOS 15 Sequoia and newer (Apple silicon M1/M2/M3/M4/M5):**
->   1. Download **`krypton-desktop-<version>-macos-arm64.dmg`** from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (or [krypton-nightly](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly)).
->   2. Double-click the `.dmg` and drag **krypton** into **Applications** (no Homebrew or extra libraries needed).
->   3. Clear macOS Gatekeeper's quarantine flag in Terminal:
->      ```bash
->      xattr -dr com.apple.quarantine /Applications/krypton.app
->      ```
->      *(Or open **krypton** once, then click **Open Anyway** in **System Settings → Privacy & Security**.)*
->   4. Launch **krypton** from **Applications** or Spotlight. It opens straight into **Chat** (`Cmd+L`) and starts your local hub automatically.
-> - **Linux — Any Distribution with Flatpak (Ubuntu, Fedora, Arch, Debian, Mint, openSUSE):**
->   1. Download **`krypton-desktop-<version>-linux-x86_64.flatpak`** (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases).
->   2. Install and run:
->      ```bash
->      flatpak install --user ~/Downloads/krypton-desktop-*-linux-*.flatpak
->      flatpak run io.github.the_vibey_project.krypton
->      ```
-> - **Linux — Ubuntu 24.04 LTS and newer (Native `.tar.gz`):**
->   1. Download **`krypton-desktop-<version>-linux-x86_64.tar.gz`** (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases).
->   2. Install the system GTK 4 / libadwaita dependencies and unpack into `/`:
->      ```bash
->      sudo apt update && sudo apt install -y libgtk-4-1 libadwaita-1-0 libsoup-3.0-0 libjson-glib-1.0-0 libavahi-client3 libavahi-glib1 glib-networking
->      sudo tar -xzf ~/Downloads/krypton-desktop-*-linux-*.tar.gz -C /
->      krypton-desktop
->      ```
-> - **Want the other krypton interfaces too (VS Code, Web, Android, iOS, or `vibey connect` for Claude Code / Codex)?** See [docs/guides/install.md](../../docs/guides/install.md) and [docs/guides/downloads.md](../../docs/guides/downloads.md).
+> **Bottom Line Up Front (BLUF):** krypton desktop is vibey's desktop app for macOS 15+ on Apple
+> silicon and for Linux, written in C17 on GTK 4 and libadwaita. It opens on **Chat** (`Ctrl+L`),
+> starts this computer's vibey hub for you, and shows projects, gates, lanes, budgets and devices.
+> Install vibey first, then the `.dmg`, Flatpak or Ubuntu tarball from GitHub Releases. It talks
+> only to the hub, never to vibey's database.
 
-The desktop app for vibey, for Linux and macOS. It is written in C17 on GTK 4 and
-libadwaita, and it talks to a vibey hub (`vibey serve`, [ADR-0068](../../docs/architecture/decisions/0068-the-hub.md))
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `krypton desktop` is actively being developed and is not a final product. Features, UI, and packages are still evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
+## How to read this page
+
+Daniel had installed the app and pressed `Cmd+L` on his Mac. Nothing happened.
+
+**Daniel:** Professor, the page I read said Command-L.
+
+**Professor Feynman:** Then the page was wrong, and that is worth knowing. Every shortcut here is
+the Control key, on a Mac as well; the table that sets them is one C file, and this page is
+checked against it. Install first, using the steps below. The tables after that are for looking
+things up when you need them.
+
+## Install
+
+First, make sure the `vibey` engine is installed on your computer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+```
+
+The hub that krypton starts reads vibey's database, so PostgreSQL and `VIBEY_PG_URL` must be set
+up too; the [install guide](../../docs/guides/install.md) walks through it. Then pick your
+operating system:
+
+- **macOS 15 Sequoia and newer (Apple silicon M1/M2/M3/M4/M5):**
+  1. Download **`krypton-desktop-<version>-macos-arm64.dmg`** from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (or [krypton-nightly](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly)).
+  2. Double-click the `.dmg` and drag **krypton** into **Applications** (no Homebrew or extra libraries needed).
+  3. Clear macOS Gatekeeper's quarantine flag in Terminal (the `.dmg` is ad-hoc signed while the project's Developer ID signing and notarisation secrets are absent):
+     ```bash
+     xattr -dr com.apple.quarantine /Applications/krypton.app
+     ```
+     *(Or open **krypton** once, then click **Open Anyway** in **System Settings → Privacy & Security**.)*
+  4. Launch **krypton** from **Applications** or Spotlight. It opens straight into **Chat** (`Ctrl+L`) and starts your local hub automatically.
+- **Linux, any distribution with Flatpak** (CI builds and tests the app on Ubuntu, Arch and Fedora; other distributions are not tested):
+  1. Download **`krypton-desktop-<version>-linux-x86_64.flatpak`** (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases).
+  2. Install and run:
+     ```bash
+     flatpak install --user ~/Downloads/krypton-desktop-*-linux-*.flatpak
+     flatpak run io.github.the_vibey_project.krypton
+     ```
+- **Linux, Ubuntu 24.04 LTS and newer (native `.tar.gz`):**
+  1. Download **`krypton-desktop-<version>-linux-x86_64.tar.gz`** (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases).
+  2. Install the system GTK 4 / libadwaita dependencies and unpack into `/`:
+     ```bash
+     sudo apt update && sudo apt install -y libgtk-4-1 libadwaita-1-0 libsoup-3.0-0 libjson-glib-1.0-0 libavahi-client3 libavahi-glib1 glib-networking
+     sudo tar -xzf ~/Downloads/krypton-desktop-*-linux-*.tar.gz -C /
+     krypton-desktop
+     ```
+
+Want the other krypton interfaces too (VS Code, web, Android, iOS, or `vibey connect` for Claude
+Code and Codex)? See [docs/guides/install.md](../../docs/guides/install.md) and
+[docs/guides/downloads.md](../../docs/guides/downloads.md).
+
+The desktop app talks to a vibey hub (`vibey serve`, [ADR-0068](../../docs/architecture/decisions/0068-the-hub.md))
 over the [hub API](../../docs/reference/hub-api.md). It never touches vibey's database.
 
 ## What it shows
@@ -56,8 +88,21 @@ The header menu holds Start a project, the hub's Start, Stop and Status, Refresh
 
 **The tray item** (the menu bar on macOS, a StatusNotifierItem elsewhere) shows how many gates wait on you, opens the window, jumps to Gates, starts a project and quits. While it is showing, closing the window hides it instead; if no tray is there to bring it back (GNOME needs the AppIndicator extension), the window closes as a window does. Turn it off in Settings.
 
-Keyboard: `Ctrl+L` opens Chat and focuses the composer, `Ctrl+N` starts a project, `Ctrl+R` or `F5` refreshes, `Ctrl+G` opens Gates, `Ctrl+,` opens Settings, and
-`Ctrl+?` lists every shortcut, and `Ctrl+Q` quits. On a narrow window the sidebar folds into one pane with back navigation.
+### Keyboard shortcuts
+
+Every shortcut uses the Control key, on macOS as well as Linux (`src/core/kr-commands.c`).
+
+| Keys | Command |
+|---|---|
+| `Ctrl+L` | Open Chat and focus the composer |
+| `Ctrl+N` | Start a project |
+| `Ctrl+R` or `F5` | Refresh |
+| `Ctrl+G` | Answer waiting gates |
+| `Ctrl+,` | Preferences (Settings) |
+| `Ctrl+?` | List every shortcut |
+| `Ctrl+Q` | Quit |
+
+On a narrow window the sidebar folds into one pane with back navigation.
 
 ## Connecting
 
@@ -82,6 +127,8 @@ On the computer that runs the hub, krypton reads the hub's token the way the hub
 `~/.local/state/vibey/hub/token` on Linux, `~/Library/Application Support/vibey/hub/token`
 on macOS, or `$VIBEY_HUB_STATE_DIR/token`. The file must be yours alone (mode 0600) and
 not a symlink, or krypton refuses it, just as the hub does.
+
+### Pairing with a hub on another computer
 
 A hub on another computer is found on the network, but being on the network proves
 nothing (SD-01). krypton reaches it only as a device the host has paired, never with the
@@ -116,9 +163,20 @@ device. A keyring (libsecret, the macOS Keychain) is not used yet. krypton keeps
 at a time; pairing with another hub replaces it, and the host revokes a device with
 `vibey hub revoke <device>`.
 
+## When it goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| macOS says krypton "cannot be opened" or is damaged | Gatekeeper's quarantine flag on an app that is not notarised. | `xattr -dr com.apple.quarantine /Applications/krypton.app`, or **Open Anyway** in Privacy & Security. |
+| The connection status notes that the hub could not be started | `vibey hub start` failed, or no `vibey` was found on the short `PATH` a Dock launch gets. | Run `vibey hub start` in a terminal to see why; set `KRYPTON_VIBEY` to the full path of `vibey` if it lives somewhere krypton does not look. |
+| krypton says to upgrade vibey | The installed `vibey` has no `vibey hub start \| stop \| status`. | Re-run the install command at the top of this page. |
+| krypton refuses the hub's token | The token file is not mode 0600, or it is a symlink. | `chmod 600` the token file named under [Connecting](#connecting). |
+| A typed pairing code is refused for a hub on another computer | krypton does not know that hub's certificate. | Paste the whole `vibey-pair://` address `vibey hub pair` printed. |
+| Closing the window does not quit | The tray item is showing, so closing hides the window. | Quit from the tray or `Ctrl+Q`, or turn the tray off in Settings. |
+
 ## Building
 
-You need Meson 1.1 or newer, GLib 2.74, json-glib, libsoup 3, GTK 4.12 and libadwaita 1.4,
+You need Meson 1.1 or newer, GLib 2.74, json-glib, libsoup 3, GTK 4.12 and libadwaita 1.5,
 and glib-networking at run time to reach a hub on the LAN over TLS. Discovery uses Avahi on
 Linux and `dns_sd.h` on macOS.
 
@@ -138,12 +196,15 @@ build makes runs against Homebrew. A self-contained `krypton.app` in a `.dmg`, t
 release attaches, is made from it by `scripts/macos_app_bundle.py` (see
 [PACKAGING.md](PACKAGING.md#macos)). On macOS, discovery finds hubs over Bonjour.
 
+Build options (`meson_options.txt`):
+
 | Option | Default | Meaning |
 |---|---|---|
 | `-Dchannel=stable\|nightly` | `stable` | Nightly installs beside stable, as "krypton nightly" with its own app id and data directory. |
 | `-Dgui=` | `auto` | Build the GTK app, not only the core. |
 | `-Dhub_transport=` | `auto` | The libsoup hub client. |
 | `-Ddiscovery=` | `auto` | Avahi or dns_sd. |
+| `-Dtray=auto\|macos\|sni\|none` | `auto` | The tray item: the macOS menu bar, the freedesktop StatusNotifierItem, or none. `auto` picks `macos` on macOS and `sni` elsewhere. |
 
 ## How it is built
 
@@ -152,6 +213,7 @@ release attaches, is made from it by `scripts/macos_app_bundle.py` (see
   - `kr-model`: the hub's documents as structs;
   - `kr-chat`: the `/` slash-command catalogue and completion, `POST /api/v1/chat/messages`
     request and turn parser, spend-gate badge helper, and live ledger narration parser;
+  - `kr-commands`: the one table of commands, labels and keyboard accelerators;
   - `kr-hub` and `kr-hub-client`: routes, the token, a paired device's request signature,
     the certificate pin and the libsoup transport;
   - `kr-answer`: which answer each gate kind takes, mirroring `src/vibey/cli/gate_answers.py`;
@@ -160,6 +222,11 @@ release attaches, is made from it by `scripts/macos_app_bundle.py` (see
   - `kr-settings`: themes, channels and whether the hub starts with krypton;
   - `kr-hub-engine`: `vibey hub status | start | stop` through `GSubprocess` (never a shell), on
     a worker thread, and the words for a hub that does not answer;
+  - `kr-lifecycle`: starting, pausing, resuming and unwinding a project from a device
+    (ADR-0091): the name a project may have, the request bodies, the answers, and the words
+    before an unwind;
+  - `kr-tray`: what the tray item shows and offers, as plain data; the platform shims in
+    `src/app/` only draw it;
   - `kr-pairing` and `kr-pairing-client`: the pairing code and address, the claim, the
     device's key and where it is kept;
   - `kr-discovery`, with its Avahi and dns_sd backends;
@@ -180,3 +247,16 @@ release attaches, is made from it by `scripts/macos_app_bundle.py` (see
 Every release attaches a Flatpak bundle, an Ubuntu build and a macOS `.dmg`
 ([downloads](../../docs/guides/downloads.md)). No store carries krypton yet. See
 [PACKAGING.md](PACKAGING.md).
+
+## Where next
+
+- [ADR-0073](../../docs/architecture/decisions/0073-krypton-desktop-in-c-on-gtk.md): why the desktop
+  app is C on GTK.
+- [ADR-0071](../../docs/architecture/decisions/0071-hub-pairing-and-trust.md): how pairing and trust
+  work.
+- [PACKAGING.md](PACKAGING.md): how the Flatpak, tarball and `.dmg` are made.
+
+## Say it in one line
+
+krypton desktop is vibey's native app for macOS and Linux: it starts your local hub, opens on
+Chat with Ctrl+L, and pairs with a hub elsewhere only by a code you can check.

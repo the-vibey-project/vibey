@@ -3,6 +3,13 @@ description: The continuation prompt that orients an agent in vibey as it stands
 ---
 # Resume
 
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** Reach for this prompt when nobody remembers where things
+> were. Paste the `text` block below into a capable agent working in a clone of this
+> repository: it reads the law, establishes from evidence what is in flight and what is red,
+> picks the next item that is not an operator hold, and lands it only as a pull request into
+> `develop`. GitHub also runs it weekly.
+
 Orient in the repository as it stands, find the work in flight, and continue it — the
 prompt to reach for when nobody remembers where things were.
 
@@ -35,7 +42,9 @@ the only truth. Your working directory is a clone of it.
      stop here and follow docs/continuation/keep-green.md first.
    - `gh issue list --state open --limit 50` and scripts/backlog_expectations.json — what is
      owed, and which issues are operator holds (never act on a hold).
-   - docs/estimate.md — the living roadmap and the delivery forecast (Doctrine 11).
+   - docs/estimate.md — the living roadmap and the delivery forecast (Doctrine 11). Read
+     the date it was recorded at the top: a forecast older than a week is stale, so say so
+     and do not plan from its numbers alone.
 3. Pick the next item: the highest-priority open issue that is not a hold, is not already
    covered by an open PR, and that you can finish and prove. Say which you chose and why.
 4. Deliver it the way this project delivers everything (ADR-0039, CDD): state the intent and

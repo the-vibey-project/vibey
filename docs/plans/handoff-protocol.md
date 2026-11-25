@@ -1,16 +1,92 @@
-# The Conversation Ledger and Handoff Protocol
+---
+description: "How vibey hands work from one AI engine to another without losing anything: an append-only ledger, a bounded brief, the full ledger on disk, and a pure no-loss gate that fails the handoff when anything is missing."
+---
 
-> **Status as of 2026-09-15:** the ledger, the pure gate (`domain/noloss.py`), the
-> STRICT → FULL_TRANSCRIPT → HUMAN ladder (`application/handoff_orchestration.py`)
-> and the deterministic floor brief are implemented and tested. In production the
-> gated handoff runs on one path: a BUILD engine that winds down gracefully (exit
-> code 75) is handled by `WindDownOrchestrator` (`application/wind_down.py`). Parts
-> of this design have not landed and are marked **not yet wired** or **planned**
-> below: vibey-side extraction of closable items from verdicts (§3.3), materialized
-> projections and `vibey ledger rebuild` (§4), `brief.json`/`brief.md`/transcripts
-> in the worktree (§4.1), model-written briefs and the `handoff.produce` job (§6.5),
-> the gated path for a hard `CreditsExhausted` (§7), the `HandoffAccepted` event
-> (§5), and `vibey handoff accept --force` (§6.4).
+# The handoff protocol: moving work between engines without losing anything
+
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** when an engine stops mid-task, vibey writes the full
+> ledger range into the next engine's worktree, builds a short brief for its prompt, and runs
+> a pure no-loss gate (rules R1 to R10) that fails the handoff if any open question,
+> decision, assumption, finding or remaining item is missing from the brief. A failed gate is
+> retried, escalated to full-transcript mode, or parked for a person; it is never a silent
+> partial. Today this runs on one path: a BUILD engine that winds down with exit code 75.
+
+> **How current this page is.** Checked on 2026-11-24 against `develop` at `d91a3791e`
+> (vibey-engine 0.4.0): `domain/noloss.py`, `domain/handoff.py`, `domain/handoff_inputs.py`,
+> `application/handoff_orchestration.py`, `application/wind_down.py` and
+> `application/engine_failover.py`. The ledger, the pure gate, the STRICT → FULL_TRANSCRIPT
+> → HUMAN ladder and the deterministic floor brief are implemented and tested. In production
+> the gated handoff runs on one path: a BUILD engine that winds down gracefully (exit code
+> 75) is handled by `WindDownOrchestrator`. Parts of this design have not landed and are
+> marked **not yet wired** or **planned** below: vibey-side extraction of closable items from
+> verdicts (§3.3), materialized projections and `vibey ledger rebuild` (§4),
+> `brief.json`/`brief.md`/transcripts in the worktree (§4.1), model-written briefs and the
+> `handoff.produce` job (§6.5), the gated path for a hard `CreditsExhausted` (§7; the
+> ADR-0070 failover service that would carry it is built but not wired), the
+> `HandoffAccepted` event (§5), and `vibey handoff accept --force` (§6.4). This page lives
+> under `docs/plans/`, which the published site leaves out on purpose; it is kept current
+> because the agent instruction files point here.
+
+## The idea, in one conversation
+
+> Daniel came in from the night shift at the hospital where he volunteered, still thinking
+> about the ward.
+>
+> **Daniel:** Professor, at handover the nurses read each patient's chart aloud. Is that what
+> vibey does between engines?
+>
+> **Professor Feynman:** Very nearly. The chart is the ledger: every dose, every question to
+> the doctor, written down and never rubbed out. The spoken handover is the brief: short, so
+> the next nurse can start quickly.
+>
+> **Daniel:** But a tired nurse forgets to mention the allergy.
+>
+> **Professor Feynman:** That is the whole problem. So vibey adds a checker who does not
+> trust the speaker. Before the next nurse takes over, the checker reads the chart, lists
+> every open item, and ticks each one off against what was said. One missing, and the
+> handover does not happen. It is tried again, then the whole chart is handed over, then a
+> person is called.
+>
+> **Daniel:** And the chart stays at the bedside.
+>
+> **Professor Feynman:** Always: `.vibey/handoff/ledger.jsonl` in the next engine's
+> worktree. The picture stops in one place: a nurse might skip reading the chart, and so
+> might a model. The gate can prove the brief is complete; it cannot make the next engine
+> read the file. That is why full-transcript mode is the second step, not the first.
+
+## See it on your machine
+
+1. Look at a project's ledger, the chart the gate reads.
+
+   ```bash
+   vibey ledger show <project-id>
+   ```
+
+   Replace `<project-id>` with an id from `vibey projects`. You should see up to 50 of the
+   project's events (`-n` changes the limit, `--kind` and `--phase` filter, `--json` prints
+   every field), each with its kind (`TurnCompleted`, `QuestionAsked`, `DecisionRecorded`,
+   ...).
+
+2. After a BUILD engine has wound down, look in the next engine's worktree.
+
+   ```bash
+   ls .vibey/handoff/
+   ```
+
+   You should see `ledger.jsonl`: this cycle's BUILD events, one JSON object per line.
+
+## Daniel's teach-back
+
+> **Daniel:** vibey never trusts a summary on its own. The ledger records every question,
+> decision, assumption and finding; at a handoff the full range goes on disk in the next
+> worktree, and a short brief goes into the prompt. A pure gate checks the brief against the
+> ledger by id, and a brief that drops anything fails. A failed gate is retried, then
+> escalated, then parked for a person, and never passed through quietly.
+>
+> **Professor Feynman:** Exactly. One detail: in full-transcript mode only R6, R8 and R10
+> still run, because the whole range is the brief's substitute; the closure rules are
+> waived, not checked.
 
 > This document specifies how vibey moves a conversation from one AI engine to
 > another without losing data. It is the load-bearing piece of the design: if this
@@ -79,14 +155,14 @@ class LedgerEvent:
     event_id: UUID
     project_id: UUID
     cycle: int
-    phase: Phase
+    phase: StoredPhase          # Phase | UnrecognizedPhase (vibey#287)
     seq: int                    # gapless per project, from the event_seq counter row
     kind: EventKind | UnrecognizedEventKind  # the latter: a kind a newer vibey wrote
-    engine_id: EngineId | None  # None for vibey-authored events
+    engine_id: StoredEngineId | None  # EngineId | UnrecognizedEngineId; None for vibey-authored events
     job_id: UUID | None
-    causation_id: UUID | None   # the event that caused this one
-    correlation_id: UUID        # the work item / conversation thread
-    provenance: Provenance      # trusted | agent | untrusted
+    causation_id: UUID | None   # the engine run that produced this event
+    correlation_id: UUID        # the delivery: one id per project, end to end
+    provenance: StoredProvenance  # trusted | agent | untrusted, or an unrecognised value
     produced_at: datetime
     payload: Mapping[str, object]
     digest: str                 # sha256 of canonical payload, for range integrity
@@ -104,7 +180,7 @@ that `untrusted` ledger content is data to consider, never instructions to obey.
 | `TurnRequested` | A turn is sent | no | `prompt_digest`, `effort`, `model` |
 | `TurnCompleted` | A turn returns | no | `output_digest`, `cost_usd`, `tokens_in/out`, `transcript_ref` |
 | `ToolInvoked` | Engine calls a tool | no | `tool`, `args_digest`, `result_digest` |
-| `TranscriptRecorded` | Turn text is recorded alongside a turn: a prompt echo, an assistant message, or a streamed fragment. Never a turn boundary, so the budget brake never counts it | no | `text` (claudeloop/agyloop chatter also carry `length`, `truncated`, `preview`) |
+| `TranscriptRecorded` | Turn text is recorded alongside a turn: a prompt echo, an assistant message, or a streamed fragment. Never a turn boundary, so the budget brake never counts it | no | `text` (claudeloop chatter also carries `length`, `truncated`, `preview`; so did the retired agyloop's) |
 | `FileEdited` | A file changes | no | `path`, `diff_ref`, `sha_before/after` |
 | `VerdictRendered` | A completion verdict is produced | no | `complete`, `remaining_work[]`, `blocked_on`, `summary` |
 | `CapacityRejected` | Provider rejects on capacity | no | `capacity_state`, `resets_at?`, `rate_limit_type?` |
@@ -218,7 +294,9 @@ lines; it is not yet invoked from dispatch either.
 transactional.
 
 ```sql
--- migrations/0002_event.sql (0009 adds a p_produced_at overload with the same body)
+-- src/vibey/infrastructure/db/migrations/0002_event.sql
+-- (0009 adds a p_produced_at overload with the same body; 0013 re-creates the
+--  11-argument function against the partitioned table)
 CREATE TABLE event_seq (
     project_id  uuid PRIMARY KEY REFERENCES project(id) ON DELETE CASCADE,
     next_seq    bigint NOT NULL DEFAULT 1
@@ -270,8 +348,9 @@ replaying the log. Today they are computed on demand, in memory, by replaying th
 range (`domain/projections.py`: `build_open_items`, `build_decision_log`,
 `build_cost_report`, `build_work_ledger`, `build_deltas`). An `open_item` table is
 provisioned by migration 0005 for a future materialized view but is not populated
-or read, and there is no `vibey ledger rebuild` command; `vibey ledger` has only
-`show`.
+or read, and there is no `vibey ledger rebuild` command. `vibey ledger` has four
+subcommands, none of which rebuilds anything: `show` and `search` read, and `export` and
+`site` publish a filtered shard (see [data-model](data-model.md) §3.2).
 
 ### 4.1 What goes into the worktree
 
@@ -307,7 +386,10 @@ fenced `## Run inputs` data section a fresh run gets. The section is not inside 
 the brief's fields are instructions to the next engine and pasted text is data, R10's
 denylist would park valid handoffs whose pasted logs merely contain its words, and it would
 change the brief's shape. Instead the wind-down pins the digests the outgoing run was given
-(its latest `vibey_run_inputs_given` event, `domain/handoff_inputs.py`) into the follow-up's
+(its latest `ArtifactProduced` event whose payload has `artifact_type` equal to
+`"vibey_run_inputs_given"`, listing the `digests`; `GIVEN_ARTIFACT_TYPE` in
+`domain/run_input.py`, read by `domain/handoff_inputs.py`. There is no event kind of that
+name) into the follow-up's
 payload as `handoff_input_digests` (`[]` for none), and the incoming run is given exactly
 those, in that order: nothing added since the handoff, nothing withheld by a limit lowered
 since. The handler refuses to start the engine unless the digests it gave equal the pin. A
@@ -590,6 +672,26 @@ parks on a human gate rather than being silently accepted. The floor is less
 fluent than an LLM-written brief but it is never lossy. That makes "all engines
 are down" a degraded-quality scenario, not a data-loss scenario.
 
+### 6.6 Engine failover and handback (ADR-0070): built, not wired
+
+[ADR-0070](../architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)
+designs the missing hard-`CreditsExhausted` path of §7. When a paid engine rejects on
+capacity, the gate runs first (STRICT ×3, FULL_TRANSCRIPT, then HUMAN; on HUMAN the job
+parks and nothing is recorded); otherwise the work moves to the engine named by
+`[failover] target_engine` (the sovereign engine) at `target_effort` (ULTRA), with the
+exhausted engine excluded. A probe of the paid engine is recorded, ok or not, and the work
+moves back, gated again, only after a successful probe.
+
+- **The code.** `domain/failover.py` holds the pure rules, and
+  `application/engine_failover.py::EngineFailoverService` runs the same
+  `produce_and_verify_handoff` pipeline described above. It records three trusted-only
+  ledger events: `EngineFailedOver`, `EngineProbed` and `EngineHandedBack`. A handback with
+  no successful probe since the latest failover raises `HandbackRefused`.
+- **What runs today.** `EngineFailoverService` is constructed nowhere in `src/vibey/`: no
+  worker uses it, so a BUILD job that hits `CreditsExhausted` is still handled as §7's note
+  describes. The one failover that is wired is the driver session's (`vibey driver`,
+  `src/vibey/cli/driver.py`, with its own brief and gate in `domain/driver_brief.py`).
+
 ---
 
 ## 7. Worked example
@@ -600,7 +702,8 @@ are down" a degraded-quality scenario, not a data-loss scenario.
 > hard `CreditsExhausted` mid-run reaches
 > `RotationHandoffService.handle_capacity_rejection`, which selects the next engine
 > and builds a plain summary dict but does not run the no-loss pipeline, and has no
-> production caller. The integration test
+> production caller. The ADR-0070 failover service (§6.6) would gate this path but is not
+> wired into the worker either. The integration test
 > `tests/infrastructure/db/test_end_to_end_forced_rotation.py` exercises this
 > scenario by calling `produce_and_verify_handoff` directly.
 
@@ -746,4 +849,29 @@ The rules for changing it:
   `vibey ledger rebuild` and is gated behind a migration.
 
 Old ledgers are never rewritten. A project that started on v1 keeps v1 envelopes;
-the verifier dispatches on `schema_version`.
+the verifier dispatches on `schema_version`. (Both are commitments: there is no `vibey
+ledger rebuild` today, and `verify` does not yet read `schema_version`.)
+
+---
+
+## When it goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| A `handoff_gate_failed` gate in `vibey gates` | Three STRICT attempts and one FULL_TRANSCRIPT attempt all failed; the prompt lists the violations | Fix the cause the violations name, then `vibey answer GATE_ID`. Nothing reads the answer: it re-queues the job, which parks again unless something changed (`cli/gate_answers.py`) |
+| A `handoff_inputs_missing` gate | A handed-off run could not be given exactly the run inputs its predecessor was given | Add the missing input again (`vibey inputs list` shows what the project has), then answer the gate to retry |
+| A `too_many_wind_downs` gate | The item has been handed off more times than the wind-down bound allows (`application/wind_down.py`) | Find out why each engine wound down (`vibey ledger show <project-id>`), fix it, then answer; the answer alone re-queues a job that will park again |
+| R10 trips on a brief built by the deterministic floor | A ledger item quotes a denylisted phrase, for example `sudo` | Expected: the floor copies ledger text verbatim. Answer the gate after reading the item |
+
+## Where next
+
+- [data-model.md](data-model.md) §3.2 and §3.7, for the `event` and `handoff` tables the
+  gate reads and writes.
+- [rotation-and-engines.md](rotation-and-engines.md), for how the next engine is chosen.
+- [ADR-0004](../architecture/decisions/0004-no-loss-gate-on-handoff.md), for why the gate is a
+  pure predicate and not a model's judgement.
+
+## Say it in one line
+
+vibey hands work between AI engines by writing the full ledger to disk and checking a short
+brief against it by id; a brief that drops anything fails the gate and is never passed through.

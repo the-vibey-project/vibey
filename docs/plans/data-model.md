@@ -1,13 +1,88 @@
-# Data Model
+---
+description: "vibey's PostgreSQL schema as the 23 migrations build it: the projects, the job queue, the partitioned append-only ledger, gates, handoffs, engine health and the newer state-sync, triage and ACP tables."
+---
 
-> **Status as of 2026-09-15:** DDL in §3 is quoted from `migrations/0001`–`0011`
-> (the full set on `develop`). Sections that described tables with no migration
-> (visual revisions, deployment contracts), a `vibey migrate` command, a
-> transition advisory lock, and pruning/partitioning have been corrected to what
-> the code does; the original designs are kept and marked **proposed** or
-> **planned**. Several provisioned tables (`work_item`, `open_item`, `artifact`,
-> `budget_ledger`) exist in the schema but no repository reads or writes them yet
-> (see §3).
+# The data model: vibey's PostgreSQL schema, table by table
+
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** everything vibey must not forget lives in one PostgreSQL
+> database (14 to 18), built by 23 forward-only migrations shipped inside the package. The
+> job queue uses `FOR UPDATE SKIP LOCKED`; the ledger (`event`) is range-partitioned on `seq`
+> with primary key `(project_id, seq)`, and triggers refuse every `UPDATE`, `DELETE` and
+> `TRUNCATE`. Read this page before you write SQL or a migration against vibey's tables.
+
+> **How current this page is.** Checked on 2026-11-24 against the migrations in
+> `src/vibey/infrastructure/db/migrations/` (0001–0023, the full set on `develop` at
+> `d91a3791e`, vibey-engine 0.4.0) and the repositories beside them. This revision corrects
+> the ledger's shape (§3.2 now shows the partitioned table of 0013 and the triggers of
+> 0016/0017 instead of the rules they replaced), adds `triaged_ticket` (0020) and the
+> `vibey_ledger_appended` notification (0019), says which tables have no ORM object, and
+> fixes the foreign-key and retention claims. Sections that described tables with no
+> migration (visual revisions, deployment contracts), a transition advisory lock and
+> pruning are kept as designs and marked **proposed** or **planned**. Several provisioned
+> tables (`work_item`, `open_item`, `artifact`, `budget_ledger`) exist in the schema but no
+> repository reads or writes them yet (§3). This page lives under `docs/plans/`, which the
+> published site leaves out on purpose; it is kept current because the agent instruction
+> files point here.
+
+## The idea, in one conversation
+
+> The library was nearly empty. Daniel had a migration file open and was counting the
+> `CREATE` statements on his fingers.
+>
+> **Daniel:** Professor, why is the ledger split into partitions? It is one list of events.
+>
+> **Professor Feynman:** Think of a library's day books. One enormous book is fine until it
+> is too heavy to lift. So you keep one shelf of volumes, each holding a run of page numbers.
+> The catalogue still says "page 1,478 of project seven", and you go to the right volume.
+>
+> **Daniel:** And the page number is `seq`?
+>
+> **Professor Feynman:** Yes: one gapless count per project, which is why the key is
+> `(project_id, seq)` and not the event's own id. Two projects can both have a page 12.
+>
+> **Daniel:** What stops someone rubbing a page out?
+>
+> **Professor Feynman:** At first, a polite notice saying "please do not erase", which a
+> determined person could ignore and the librarian could take down. Since migration 0016 it
+> is a guard on every volume who refuses out loud, and the clerks are given pens that cannot
+> erase at all: the application's database role may only read and add. The picture stops in
+> one place: today every page still sits in a single default volume. The shelf is built; it
+> has not needed a second volume yet.
+
+## See it on your machine
+
+1. Apply the migrations, as the schema's owner.
+
+   ```bash
+   vibey migrate
+   ```
+
+   It reads the owner's DSN from `VIBEY_PG_MIGRATE_URL` and the application's from
+   `VIBEY_PG_URL`, so set both first. It applies every migration not yet recorded in
+   `schema_migration`, grants the application role exactly its declared privileges, then
+   connects as that role and reports whether the ledger guard is in force. It exits 1 when
+   the guard is not in force, for example when both DSNs name the same role.
+
+2. List the guards on the ledger, read-only.
+
+   ```bash
+   psql "$VIBEY_PG_URL" -c "SELECT tgname FROM pg_trigger WHERE tgrelid = 'event'::regclass AND NOT tgisinternal ORDER BY tgname;"
+   ```
+
+   You should see three rows: `event_announce_append` (0019), `event_append_only` and
+   `event_no_truncate` (0016). Do not test the guard by trying to rewrite a real ledger.
+
+## Daniel's teach-back
+
+> **Daniel:** vibey keeps everything in one PostgreSQL database, built by 23 migrations that
+> only ever move forward. Jobs wait in the `job` table and workers take them with `SKIP
+> LOCKED`. The ledger is the `event` table, numbered by a gapless `seq` per project and keyed
+> on `(project_id, seq)`, partitioned by `seq`, and guarded by triggers so no one can change
+> or delete a row. Corrections are new events.
+>
+> **Professor Feynman:** Right. One fix: "no one" means no SQL statement. The owner role could
+> still disable a trigger, which is why vibey's own processes never connect as the owner.
 
 > PostgreSQL 14+. CI exercises majors 14–18; the chart default is PostgreSQL 17.
 > All timestamps `timestamptz`. All ids `uuid` except `event.seq`
@@ -17,8 +92,11 @@
 > application's own role may migrate (a single-DSN install); see §7 and ADR-0055.
 
 The live schema also has a Pydantic-backed SQLAlchemy projection in
-`src/vibey/infrastructure/db/orm_models.py`. It uses SQLModel so every one of
-the fourteen migrated relations in §3 and §7 has a typed Python ORM object;
+`src/vibey/infrastructure/db/orm_models.py`. It uses SQLModel and declares 14 table
+models: 13 of the tables in §3 plus `schema_migration` (§7). Four later tables have **no**
+ORM object: `triaged_ticket` (0020, read and written by `scripts/triage_queue.py`),
+`state_sync` (0022, `infrastructure/state/postgres_state_store.py`), `acp_session` and
+`acp_session_event` (0023, `infrastructure/db/acp_session_repository.py`).
 `PostgresOrm` provides async sessions. Migrations remain authoritative and the
 projection deliberately does not call `metadata.create_all()`. The existing
 asyncpg repositories continue to own operations whose correctness depends on
@@ -64,12 +142,20 @@ erDiagram
     project ||--o{ budget_ledger : spends
     handoff }o--|| engine_health : from
     handoff }o--|| engine_health : to
+    project |o--o{ triaged_ticket : "dispatched as"
+    acp_session ||--o{ acp_session_event : records
 ```
 
-Every table except `project` and `job_dependency` carries a declared foreign key to
-`project`; `job_dependency` references `job` twice, `handoff.job_id` and
-`human_gate.job_id` reference `job`, and
-`open_item.superseded_by` references `open_item`. The `work_item → job`, `event → open_item` and
+`state_sync` (0022) stands alone: one row per sync remote, keyed by `remote`, with no
+foreign key.
+
+Of the tables of 0001–0011, every one except `project` and `job_dependency` carries a
+declared foreign key to `project`; `job_dependency` references `job` twice,
+`handoff.job_id` and `human_gate.job_id` reference `job`, and
+`open_item.superseded_by` references `open_item`. The later tables differ:
+`triaged_ticket.project_id` is nullable and `ON DELETE SET NULL` (a ticket exists before
+its project), `acp_session_event` references `acp_session`, and `state_sync` and
+`acp_session` reference nothing. The `work_item → job`, `event → open_item` and
 `handoff → engine_health` edges are logical (text ids), not constraints.
 `cycle_record` is a conceptual grouping by `(project_id, cycle)`; there is no
 such table. `handoff.job_id` is always written as `NULL` today
@@ -79,7 +165,7 @@ such table. `handoff.job_id` is always written as `NULL` today
 
 ## 3. Core tables
 
-Every `CREATE` below is from a file in `migrations/`. Tables `work_item` (0004),
+Every `CREATE` below is from a file in `src/vibey/infrastructure/db/migrations/`. Tables `work_item` (0004),
 `open_item` (0005), `artifact` and `budget_ledger` (0008) are created and asserted
 present by `tests/infrastructure/db/test_migrator.py`, but no repository in
 `src/vibey` reads or writes them yet: their state currently lives in the ledger
@@ -274,12 +360,16 @@ consent.
 
 ### 3.2 `event` — the ledger
 
+The table as it stands after migration 0013, which rebuilt the 0002 table as a
+range-partitioned one (copying every row and refusing to finish if the count changed):
+
 ```sql
 -- 0002_event.sql
 CREATE TYPE provenance AS ENUM ('trusted','agent','untrusted');
 
+-- 0013_ledger_partitioning.sql (the table vibey runs on today)
 CREATE TABLE event (
-    event_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id        uuid NOT NULL DEFAULT gen_random_uuid(),
     project_id      uuid NOT NULL REFERENCES project(id) ON DELETE CASCADE,
     seq             bigint NOT NULL,
     cycle           integer NOT NULL,
@@ -293,13 +383,17 @@ CREATE TABLE event (
     produced_at     timestamptz NOT NULL DEFAULT now(),
     payload         jsonb NOT NULL,
     digest          text NOT NULL,            -- sha256 of canonical payload
-    CONSTRAINT event_seq_uniq UNIQUE (project_id, seq)
-);
+    CONSTRAINT event_seq_uniq PRIMARY KEY (project_id, seq),
+    CONSTRAINT event_id_seq_uniq UNIQUE (event_id, seq)
+) PARTITION BY RANGE (seq);
+
+CREATE TABLE event_partitioned_0013_default PARTITION OF event DEFAULT;
 
 CREATE INDEX event_project_seq   ON event (project_id, seq);
 CREATE INDEX event_kind          ON event (project_id, kind, seq);
 CREATE INDEX event_correlation   ON event (correlation_id, seq);
 CREATE INDEX event_payload_gin   ON event USING gin (payload jsonb_path_ops);
+-- (0013 also recreates 0012's three search indexes on the new table; see below)
 
 -- Append-only: no UPDATE, no DELETE, no TRUNCATE -- by the database (0016, ADR-0055).
 CREATE TRIGGER event_append_only BEFORE UPDATE OR DELETE ON event
@@ -307,6 +401,16 @@ CREATE TRIGGER event_append_only BEFORE UPDATE OR DELETE ON event
 CREATE TRIGGER event_no_truncate BEFORE TRUNCATE ON event
     FOR EACH STATEMENT EXECUTE FUNCTION ledger_refuse_rewrite();
 ```
+
+**What changed in 0013.** Before it, `event_id` was the primary key and
+`(project_id, seq)` a unique constraint. Since it, the primary key is `(project_id, seq)`
+(still named `event_seq_uniq`) and `event_id` is unique only together with `seq`, because
+a unique constraint on a partitioned table must include the partition key. Address one
+event by `(project_id, seq)`; an `event_id` lookup is still possible but is not a key on
+its own. Every row lives in the one default partition today; range partitions can be
+attached later without another rewrite. 0013 also re-created the 11-argument
+`append_event()` against the new table; the `event_seq` counters were left untouched, so
+every project's next number carried over.
 
 A rewrite is refused out loud: `the ledger is append-only: UPDATE on event is refused`,
 SQLSTATE `42501`, for every role, the owner included.
@@ -322,16 +426,22 @@ SQLSTATE `42501`, for every role, the owner included.
   (`APP_ROLE_GRANTS`), so it cannot disable a trigger either. See
   [the configuration reference](../reference/configuration.md#database-roles).
 
-What they do not stop, checked against the migrated schema on 2026-09-24 as the role
-vibey connects with (the table's owner): an `UPDATE` or `DELETE` addressed to a
-partition (`event_partitioned_0013_default`) rather than to `event` changes rows,
-because a rule on a partitioned parent does not fire for its partitions; `TRUNCATE
-event` empties the ledger, because rules never fire on `TRUNCATE`; and the owner can
-`ALTER TABLE event DISABLE RULE` or drop the rules outright. So append-only is enforced
-against the application's own queries, not against a holder of the application's DSN.
-That DSN is kept out of every engine session and gate command (see
-[SECURITY.md](../../SECURITY.md), §5); a database-level guard that binds the owner too
-is a recorded follow-up.
+**History: what the rules did not stop.** Checked against the migrated schema on
+2026-09-24, before 0016, as the role vibey then connected with (the table's owner): an
+`UPDATE` or `DELETE` addressed to a partition (`event_partitioned_0013_default`) rather
+than to `event` changed rows, because a rule on a partitioned parent does not fire for its
+partitions; `TRUNCATE event` emptied the ledger, because rules never fire on `TRUNCATE`; and
+the owner could `ALTER TABLE event DISABLE RULE` or drop the rules outright. Migrations 0016
+and 0017 closed all three: the row trigger is cloned onto every partition, the `TRUNCATE`
+guard is attached to each one, and the application no longer connects as the owner.
+
+**What still holds the guard, today.** The owner role (`VIBEY_PG_MIGRATE_URL`) could still
+disable a trigger, so the boundary is that nothing but `vibey migrate` connects as it. A
+single-DSN install (the application connecting as the owner or a superuser) still starts,
+so an upgrade never strands one, but the worker says so at every start and `vibey doctor`
+fails until the roles are split (`infrastructure/db/ledger_guard.py`). The application DSN
+is kept out of every engine session and gate command (see
+[SECURITY.md](../../SECURITY.md), §5).
 
 **`kind` is open text, read forward-compatibly (vibey#275).** The column has no
 constraint and no enum type, so a newer vibey writes a kind an older one has never
@@ -362,9 +472,12 @@ So the rule is readers forward compatible, writers strict:
 - **Never written.** `LedgerEventDraft.kind` is `EventKind`, so vibey can only
   append a kind it knows. `to_drafts` refuses to re-append an unrecognized one.
 
-The same exposure exists for `phase` and `provenance` (Postgres enums read into
-closed Python enums) and `engine_id` (text read into `EngineId`). vibey#275
-covers `kind` only, the column new releases actually extend.
+The same exposure existed for `phase` and `provenance` (Postgres enums read into
+closed Python enums) and `engine_id` (text read into `EngineId`). vibey#275 covered
+`kind`; vibey#287 extended the rule to the other three, so `LedgerEvent.phase`,
+`.engine_id` and `.provenance` are `StoredPhase`, `StoredEngineId` and `StoredProvenance`,
+and an event with an unrecognised phase or provenance is kept but not `interpretable`
+(see [domain-model.md](domain-model.md) §8).
 
 **Search indexes.** `vibey ledger search` (sub-doctrine 7.a, #137) adds three
 indexes for the dimensions 0002's could not serve:
@@ -383,9 +496,10 @@ free-text criterion (`payload::text ILIKE`) has no index — `event_payload_gin`
 `jsonb_path_ops`, which answers containment, not substrings — so it scans one
 project's rows.
 
-**The hash chain is derived, not stored.** There is no `prev_hash` column. The
-`RULE`s above would silently discard a migration's backfill `UPDATE`, and a column
-filled only by new appends would leave all existing history outside the chain.
+**The hash chain is derived, not stored.** There is no `prev_hash` column. A
+migration's backfill `UPDATE` would be refused by the 0016 triggers (when the chain was
+designed, the rules then in force would have discarded it silently), and a column filled
+only by new appends would leave all existing history outside the chain.
 Instead `domain/ledger_chain.py` recomputes it from the rows: each event's link is
 the SHA-256 of the previous link and every column of the event (the payload through
 its digest), starting from a per-project genesis. A window of events verifies alone
@@ -581,9 +695,11 @@ against the batch's earlier rows first and then `job`, and one that names no job
 raises and rolls the batch back rather than enqueueing a job with a dependency missing.
 `build.decompose` fans its whole plan out this way (phase-protocols §2.1).
 
-`awaiting_capacity` and `cancelled` are defined in the enum, but no repository
-query sets them today: a capacity rejection is a `defer` back to `ready` with an
-explicit `run_after` (§3.4).
+`awaiting_capacity` is defined in the enum, but no repository query sets it today: a
+capacity rejection is a `defer` back to `ready` with an explicit `run_after` (§3.4).
+`cancelled` is set in two places: the `abandon` answer to a `defect` gate
+(`human_gate_repository.py`) and `vibey abandon` (`project_abandonment_store.py`), both
+described in §3.9.
 
 ### 3.4 Claim, heartbeat, ack, reap
 
@@ -714,7 +830,7 @@ vibey, as the claim leaves it.
 A **bump** puts a job next in line: after whatever is running, ahead of every
 un-bumped waiting job, behind every job bumped before it. `bump_seq` is NULL for a
 job in normal order; a bump draws it from the sequence `job_bump_seq`
-(`migrations/0014_job_bump.sql`), so bumped jobs are claimed first-in-first-out by
+(`src/vibey/infrastructure/db/migrations/0014_job_bump.sql`), so bumped jobs are claimed first-in-first-out by
 the order they were bumped, and the order among un-bumped jobs is exactly what it
 was. A sequence and not a timestamp: one bump moves a job and its dependencies in
 one transaction, where `now()` is one instant for all of them (sub-doctrine 10.g).
@@ -954,14 +1070,28 @@ records `{"withdrawn": true, "reason": "project abandoned"}` as its answer, the 
 name as `answered_by`, and `abandon:<project_id>` as its request id, and a `GateWithdrawn`
 event records it. No gate row is deleted, and a later answer is refused as a second one.
 
-`kind` is unconstrained text. Values raised by handlers today include `question`,
-`choice`, `approval`, `attempts_exhausted`, `budget_exhausted`,
-`escalation_exhausted`, `verify_repair_exhausted`, `integrate_repair_exhausted`,
-`handoff_gate_failed`,
-`handoff_inputs_missing`, `too_many_wind_downs`, `research_evidence`, `deploy_interview`, `deploy_acceptance`,
-`deploy_demo_review` and `deploy_failure_triage`. Bounded repair and escalation
-ladders park on these gates rather than failing (ADR-0024). Gates are answered
-with `vibey answer GATE_ID`.
+`kind` is unconstrained text. Values raised by vibey as of 2026-11-24 (a grep of the
+`kind=` arguments and `*_GATE_KIND` constants under `src/vibey/`):
+
+| Group | Kinds |
+|---|---|
+| Conversation | `question`, `choice`, `approval` |
+| The queue's own (`QUEUE_GATE_KINDS`) | `attempts_exhausted`, `delivery_exhausted` (the reaper, ADR-0056), `defect` |
+| Bounded ladders (ADR-0024) | `escalation_exhausted`, `verify_repair_exhausted`, `integrate_repair_exhausted`, `repair_not_converging` |
+| Budget and ULTRA | `budget_exhausted`, `ultra_needs_cap` |
+| Engines and handoff | `engine_misconfigured` (exit 78), `handoff_gate_failed`, `handoff_inputs_missing`, `too_many_wind_downs`, `loop_capabilities_unresolved` |
+| BUILD and REVIEW | `foreign_branch`, `review_evidence_missing`, `publish_interview` |
+| DESIGN | `research_evidence` |
+| Deployment | `deploy_interview`, `deploy_acceptance`, `deploy_demo_review`, `deploy_failure_triage` |
+| Service bus | `bus_dead_lettered` |
+
+Bounded repair and escalation ladders park on these gates rather than failing (ADR-0024).
+Gates are answered with `vibey answer GATE_ID`; `vibey gates` lists the open ones with the
+command that answers each. A project may let a few kinds resolve to their stored
+`default_answer` after waiting, by declaring `[human_gates] timeout_defaults` (only
+`choice`, `deploy_interview`, `deploy_failure_triage`, `deploy_acceptance` and
+`deploy_demo_review` may; `domain/gate_timeout.py`). Every other kind waits for a person,
+however long, and is reminded about.
 
 An exhausted job whose last `[queue.defect] identical_failures` failures (`JobFailed`
 events) share one signature parks on `defect` instead of `attempts_exhausted` or
@@ -1088,6 +1218,55 @@ CREATE INDEX acp_session_event_kind ON acp_session_event (session_id, kind, seq)
 - **Never synced** (`NOT_SYNCED`): a session belongs to the editor on this computer that kept it,
   and two computers appending to one session would diverge at a `seq`, which refuses a merge.
 
+### 3.13 `triaged_ticket` — the GitHub triage queue
+
+The triaged-delivery bridge (`scripts/triage_queue.py`,
+[the triaged-delivery runbook](../runbooks/triaged-delivery.md)) orders GitHub issues before
+any vibey project exists. GitHub stays the source of an issue's content and labels; this
+table is the local, transactional ordering and lease authority (ADR-0054, sub-doctrine 10.g).
+
+```sql
+-- 0020_triaged_ticket.sql
+CREATE TYPE triaged_ticket_state AS ENUM ('ready', 'leased', 'dispatched', 'blocked', 'completed');
+
+CREATE SEQUENCE triaged_ticket_bump_seq AS bigint;
+
+CREATE TABLE triaged_ticket (
+    repository       text NOT NULL,
+    issue_number     integer NOT NULL CHECK (issue_number > 0),
+    title            text NOT NULL,
+    body             text NOT NULL DEFAULT '',
+    issue_url        text NOT NULL,
+    priority_rank    integer NOT NULL CHECK (priority_rank BETWEEN 0 AND 3),
+    bump_seq         bigint,
+    state            triaged_ticket_state NOT NULL DEFAULT 'ready',
+    project_id       uuid REFERENCES project(id) ON DELETE SET NULL,
+    lease_owner      text,
+    lease_expires_at timestamptz,
+    source_updated_at timestamptz,
+    observed_at      timestamptz NOT NULL DEFAULT now(),
+    updated_at       timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (repository, issue_number),
+    CONSTRAINT triaged_ticket_bump_positive CHECK (bump_seq IS NULL OR bump_seq > 0),
+    CONSTRAINT triaged_ticket_lease_consistent CHECK (
+        (state = 'leased') = (lease_owner IS NOT NULL AND lease_expires_at IS NOT NULL)
+    )
+);
+
+CREATE INDEX triaged_ticket_claim ON triaged_ticket (
+    (bump_seq IS NULL), bump_seq ASC NULLS LAST, priority_rank ASC,
+    source_updated_at ASC NULLS LAST, issue_number ASC
+) WHERE state = 'ready';
+
+CREATE INDEX triaged_ticket_expiring ON triaged_ticket (lease_expires_at)
+    WHERE state = 'leased';
+```
+
+The claim index orders ready tickets the way `job`'s claim does: bumped tickets first, in
+bump order, then by `priority_rank` (lowest first), then the oldest GitHub update.
+`project_id` is filled when a ticket is dispatched as a vibey project and becomes `NULL` if
+that project row is ever deleted. There is no ORM class for this table.
+
 ---
 
 ## 4. Notifications
@@ -1099,7 +1278,20 @@ NOTIFY vibey_job_ready, '<project_id>';
 
 -- After PostgresHumanGateRepository.raise_gate (emitted; nothing LISTENs yet):
 NOTIFY vibey_gate_raised, '<gate_id>';
+
+-- 0019_ledger_appended_notify.sql: after every ledger append, in the inserting
+-- transaction, so it is delivered only if the event commits
+CREATE TRIGGER event_announce_append
+    AFTER INSERT ON public.event
+    FOR EACH ROW EXECUTE FUNCTION public.ledger_announce_append();
+-- which runs: pg_notify('vibey_ledger_appended',
+--                       json_build_object('project_id', NEW.project_id, 'seq', NEW.seq)::text)
 ```
+
+The hub holds one `LISTEN vibey_ledger_appended` connection (`infrastructure/hub/live.py`)
+and wakes each live feed subscribed to that project. A wake-up carries no event: the feed
+reads every event after the last `seq` it delivered (sub-doctrine 10.g), so a dropped
+notification delays an event and never loses one.
 
 Workers `LISTEN vibey_job_ready` (`infrastructure/db/notifier.py`) and wait at most
 5 seconds before polling again, so a missed notification costs latency, never
@@ -1123,8 +1315,9 @@ RETURNING *;
 Zero rows means the project is no longer in the expected phase — another worker
 already moved it, or the job is a replay — and the repository raises `ValueError`.
 Handlers that must tolerate replay suppress that miss and continue with idempotent
-work (for example `DeployDesignBridgeHandler`). There is no supervisor process; any
-number of workers may attempt a transition and exactly one wins.
+work (for example `DeployDesignBridgeHandler`). No central process owns transitions;
+any number of workers may attempt one and exactly one wins. (`vibey supervisor` exists,
+but it only keeps the worker and the delivery bridge running; it never moves a project.)
 
 **A project's caps** (`vibey budget set` / `clear`, `PostgresProjectBudgetStore`) are
 changed under a row lock, with their ledger events on the same connection:
@@ -1162,15 +1355,16 @@ of `sha256('vibey.migrate')`, which a start *waits* for rather than deferring �
 
 ## 6. Retention (planned)
 
-Nothing is pruned, partitioned or garbage-collected today. Every table grows
-without bound, `event` is a single heap table (0002), and there is no `vibey gc`
-command. `vibey ledger` reads (`show`, `search`) and publishes (`export`, `site`); it never
-prunes. The intended policy, none of it
-implemented:
+Nothing is pruned or garbage-collected today, and every table grows without bound.
+`event` is range-partitioned on `seq` since migration 0013, but every row is still in the
+one default partition (`event_partitioned_0013_default`): the structure for tiering
+exists, and no policy moves rows yet. There is no `vibey gc` command. `vibey ledger`
+reads (`show`, `search`) and publishes (`export`, `site`); it never prunes. The intended
+policy, none of it implemented:
 
 | Table | Intended policy |
 |---|---|
-| `event` | **never deleted** — it is the ledger. Cycles older than N move to a compressed partition by `(project_id, cycle)` once a project passes ~500k events, keeping the gate's range queries on the hot partition |
+| `event` | **never deleted** — it is the ledger (and the 0016 triggers would refuse a delete). Older ranges move to colder partitions once a project passes ~500k events, keeping the gate's range queries on the hot partition. The original design partitioned by `(project_id, cycle)`; as built, 0013 partitions by `seq` |
 | `job` | `succeeded` rows pruned after 30 days; `failed` kept until acknowledged |
 | `handoff` | kept with the ledger |
 | `artifact` | rows kept; files garbage-collected by a future `vibey gc` when unreferenced by any open item |
@@ -1212,8 +1406,10 @@ Migrations run as the schema's owner (ADR-0055), in one of three ways:
     to start while anything is pending.
 
 So every worker start either brings the schema up to date or says why it cannot.
-`migrations_dir()` resolves to `<checkout>/migrations` from a source tree and to
-`/app/migrations` in the container image. Every start also re-verifies checksums:
+`bootstrap.migrations_dir()` returns `MigrationCatalog.packaged().directory`, the package
+data under `vibey/infrastructure/db/migrations/`, the same for a checkout, the container
+image and an installed wheel. (It once resolved to a root `<checkout>/migrations` and to
+`/app/migrations` in the image; neither exists now.) Every start also re-verifies checksums:
 `apply` raises `MigrationChecksumError` if an already-applied migration's file has
 changed — an edited migration is a bug, not a convenience. A `check_only=True`
 keyword (verify, apply nothing) exists on `apply` but has no CLI flag and no caller
@@ -1285,3 +1481,58 @@ raises `MigrationLockTimeout` naming the holder's pid, and leaves no `lock_timeo
 or open transaction behind; the lock is released after a run and after a failed
 migration; and a migration does not inherit the wait bound. There is no per-version
 upgrade fixture yet: no test seeds data at migration N−1 and then applies N.
+
+### 7.3 Every migration, in order
+
+| File | What it does |
+|---|---|
+| `0001_project.sql` | `project`, the `phase` enum, the original one-project-per-path index |
+| `0002_event.sql` | `event` (unpartitioned), `event_seq`, `provenance`, the 11-argument `append_event()`, the first append-only rules |
+| `0003_job.sql` | `job`, `job_dependency`, `job_state`, the claim and reaper indexes |
+| `0004_work_item.sql` | `work_item` (provisioned, unused) |
+| `0005_open_item.sql` | `open_item` (provisioned, unused) |
+| `0006_handoff.sql` | `handoff` |
+| `0007_engine_health_rotation.sql` | `engine_health` with the credits-never-have-a-deadline `CHECK`, `rotation_cursor` |
+| `0008_human_gate_artifact_budget.sql` | `human_gate`, `artifact`, `budget_ledger` |
+| `0009_event_produced_at.sql` | the 12-argument `append_event()` that keeps the caller's `produced_at` |
+| `0010_visual_design_phase.sql` | adds `visual_design` to `phase` |
+| `0011_deployment_stage_set_phases.sql` | adds `deploy_design`, `deploy_execute`, `deploy_review` to `phase` |
+| `0012_event_search_indexes.sql` | the three `vibey ledger search` indexes |
+| `0013_ledger_partitioning.sql` | rebuilds `event` partitioned by `RANGE (seq)` with primary key `(project_id, seq)` |
+| `0014_job_bump.sql` | `job.bump_seq`, `job_bump_seq`, the claim index rebuilt bump-first (ADR-0054) |
+| `0015_job_bump_named.sql` | `job.bump_named`, replacing 0014's `bump_origin` |
+| `0016_ledger_append_only_guard.sql` | replaces the rules with triggers that refuse `UPDATE`, `DELETE` and `TRUNCATE` (ADR-0055) |
+| `0017_ledger_guard_search_path.sql` | pins the guard functions' `search_path` |
+| `0018_human_gate_answer_once.sql` | `human_gate.answer_request_id`: a gate is answered once |
+| `0019_ledger_appended_notify.sql` | `NOTIFY vibey_ledger_appended` on every append (§4) |
+| `0020_triaged_ticket.sql` | `triaged_ticket` (§3.13) |
+| `0021_project_repo_live_uniq.sql` | one live project per checkout (§3.1) |
+| `0022_state_sync.sql` | `state_sync` (§3.11) |
+| `0023_acp_session.sql` | `acp_session`, `acp_session_event` (§3.12) |
+
+---
+
+## When it goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| `ERROR: the ledger is append-only: UPDATE on event is refused` (SQLSTATE `42501`) | A statement tried to rewrite the ledger; the 0016 trigger refused it | Append a new event that supersedes the old one |
+| `permission denied for table event` on `UPDATE`, `DELETE` or `TRUNCATE` | You are connected as the application role, which holds only `SELECT` and `INSERT` | This is correct; corrections are new events |
+| `MigrationChecksumError` at start | An already-applied migration file was edited | Restore the file; write a new migration instead |
+| `MigrationLockTimeout` naming a pid | Another process has held the migration lock past `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` | Inspect that pid in `pg_stat_activity` (§7.1) |
+| SQL that joins on `event.event_id` alone is slow or ambiguous | `event_id` is not the key since 0013 | Address events by `(project_id, seq)` |
+
+## Where next
+
+- [handoff-protocol.md](handoff-protocol.md), for how the ledger range is read and verified
+  at every handoff.
+- [`docs/reference/configuration.md`](../reference/configuration.md#database-roles), for
+  the two database roles and their DSNs.
+- [ADR-0055](../architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md),
+  for why the guard is triggers and a role, not rules.
+
+## Say it in one line
+
+vibey keeps its queue and its append-only ledger in PostgreSQL: 23 forward-only migrations,
+a ledger keyed on `(project_id, seq)` and partitioned by `seq`, and triggers that refuse every
+rewrite.

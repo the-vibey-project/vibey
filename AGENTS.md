@@ -8,9 +8,12 @@ codexloop, and the local runner that ships as two engines:
 `gptossloop`, the sovereign default on GPT-OSS 20B, and the opt-in `qwenloop` on
 Qwen), which live in this
 repository under `src/vibey_runners/`. It orchestrates design → build → review with
-an optional visual-design interstitial, plus an opt-in Azure deployment stage
-set. One package — `pip install vibey-engine` delivers the whole engine family,
-engines and tools included (ADR-0037, ADR-0069); the apps are `krypton-app`. Python 3.12+.
+an optional visual-design interstitial, plus an opt-in deployment stage set
+(`[deploy] enabled = false` by default; default target `openstack`). One package —
+`pip install vibey-engine` delivers the whole engine family, engines and tools
+included (ADR-0037, ADR-0069); the apps are `krypton-app`. Python 3.12+. The version
+is held below 1.0 by `[version] max_major = 0` in `.vibey-gh.toml`: a breaking change
+derives a minor release, never 1.0.0.
 
 **This file is deliberately short — it holds facts, not procedures.** Every
 "how do I..." lives in a skill below; every "why was it built this way"
@@ -251,6 +254,17 @@ explicit opt-in; declining deployment records a successful local completion.
   `--provider`, DESIGN and DECOMPOSE run on the sovereign providers
   (`GptossloopDesignProvider`, `GptossloopWorkPlanProducer`; ADR-0027, ADR-0038,
   ADR-0064). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
+- **Sovereign default model:** the Heretic v2 build of GPT-OSS 20B
+  (`p-e-w/gpt-oss-20b-heretic-v2`, Ollama tag
+  `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`), not stock
+  `gpt-oss:20b`. `VIBEY_SOVEREIGN_MODEL=heretic|stock` picks the build;
+  `VIBEY_OLLAMA_MODEL` names any Ollama tag and wins over it.
+  `src/vibey/domain/sovereign_model.py`; ADR-0099.
+- **Two loops** (sub-doctrine 8.c, `src/vibey/domain/engine.py`): `sovereignloop`
+  drives the LOCAL tier and is the default (`DEFAULT_LOOP`); `paidloop` drives the
+  PAID tier, whose default engine is `claudeloop`. `vibey loops` shows them and
+  their engines; their skills, plugins and MCP servers are one declared, locked
+  capability bundle (ADR-0103).
 - **Rotation:** `domain/rotation.py::select()` implements smooth-weighted
   round-robin selection (ADR-0005) and is wired in production: `bootstrap.py`
   builds `EngineSelector`, and BUILD jobs pick their engine per job through
@@ -260,13 +274,41 @@ explicit opt-in; declining deployment records a successful local completion.
   engine. The full ledger is always written to disk inside the receiving
   worktree.
 
+## The hub, MCP and ACP
+
+- **The hub** is `vibey serve` (ADR-0068): one HTTP API under `/api/v1` for every
+  krypton client, on loopback `127.0.0.1:8765` by default. A LAN address needs both
+  `--host` on the command line and `[hub] lan = true` in `vibey.toml`.
+  `vibey hub start|stop|status` runs it detached; `vibey hub pair|devices|revoke`
+  manages paired devices (a 6-digit code good for 120 seconds, a pinned certificate
+  fingerprint, every request signed; ADR-0071).
+- **Principals and scopes** (`src/vibey/domain/hub_scope.py`): the host token
+  (`<state_dir>/token`) holds every scope; the agent token (`<state_dir>/agent.token`)
+  that `vibey mcp` and `vibey acp` present holds `[hub] agent_scopes`, by default
+  `view`, `answer`, `run`, `acp_sessions` and `web`, never `spend`, `bump` or
+  `workflows`. A gate whose answer spends money needs `spend`. No scope reaches what
+  `NEVER_FROM_THE_HUB` names: declaring paid use, changing or lifting caps, the
+  database DSN, migrations, the canon and state sync.
+- **Driving vibey from another tool:** `vibey mcp` is a stdio MCP server over the
+  hub (ADR-0100); `vibey acp` is an ACP agent for editors such as Zed, and installs
+  user-level services that keep the hub and a worker running (ADR-0101).
+  `vibey connect` writes the registration into Claude Code, Claude Desktop, Codex,
+  Cursor, VS Code, Gemini CLI or Zed configuration (`--client`, `--dry-run`, `--yes`).
+- **Version and verbosity:** `vibey -v` / `vibey --version` print the vibey-engine and
+  krypton-app versions; verbose output is `-d` / `--verbose` (`-dd`, `-ddd`).
+
 ## Commands worth memorizing
 
 ```bash
-# Once per clone (its worktrees share it), before the first commit: the commit hooks.
-# Without them nothing adds the `Made-With:` trailer, and CI's Provenance check fails
-# the pull request after the push. Safe to re-run; `uv run vibey-gh check` says if it held.
-uv run vibey-gh install
+# Once per clone (its worktrees share it), before the first commit: the whole contributor
+# environment in one idempotent command -- `uv sync --extra dev`, the pre-commit framework's
+# pre-commit, commit-msg and pre-push hooks, then vibey-gh's provenance hooks, a check that
+# the test database is reachable, and an advisory `vibey doctor`. `vibey-gh install` alone
+# installs only the provenance hooks: no local gate then runs on commit or push. Without the
+# provenance hooks nothing adds the `Made-With:` trailer, and CI's Provenance check fails the
+# pull request. Safe to re-run; `--check` changes nothing; `uv run vibey-gh check` says if the
+# hooks held.
+uv run --extra dev vibey-gh setup
 
 # CI job `uv-lock` (runs first)
 uv lock --check
@@ -294,11 +336,15 @@ uv run bandit -q -r src/vibey
 uv run pip-audit --skip-editable
 
 # CI job `tools`: each tool's own suite, plain pip, on Python 3.12, 3.13 and 3.14
-(cd src/vibey_tools/gh && pip install -e ".[dev]" && python -m pytest -q)
-(cd src/vibey_tools/skills && pip install -e ".[dev]" && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests)
+# (rows: the plan job's `tools_matrix`, from .github/ci-matrices.toml)
+(cd src/vibey_tools/gh && pip install -e ../../vibey_runners/common && pip install -e ".[dev]" && python -m pytest -q)
+(cd src/vibey_tools/skills && pip install -e ".[dev]" && python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests)
 (cd src/vibey_tools/bootstrap && pip install -e ../gh && pip install -e ".[test,all]" && pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term)
+(cd src/vibey_runners/common && pip install -e ".[dev]" && mypy --strict src/vibey_runners/common && lint-imports && python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov=vibey_runners.common.jsonrpc --cov=vibey_runners.common.mcp --cov-branch --cov-fail-under=100)
 # ...and on each tenant's floor row, its own static gates (the row's `static` key), e.g.
 (cd src/vibey_runners/claude && pip install -e ../common && pip install -e ".[dev]" && mypy --strict src/claudeloop && lint-imports && bandit -q -r src/claudeloop)
+# (3.12 rows also: skills `mypy --strict --explicit-package-bases src`; bootstrap `.[test,all,dev]`,
+# `mypy vibey_bootstrap/` and `bandit -r vibey_bootstrap/ -ll -q`)
 
 # CI job `tools-lint`: vibey-gh's own linters
 (cd src/vibey_tools/gh && python -m black --check vibey_gh test && isort --check-only vibey_gh test && python -m mypy vibey_gh)
@@ -314,7 +360,11 @@ step asserts one claim the Dockerfile makes), `chart` (Helm lint and golden
 render of every profile) and `cluster-smoke` (Helm install on minikube; each
 `Contract - …` step asserts one cluster behaviour). `tools-lint` additionally
 checks that both rendered copies of vibey-gh's managed automation — vibey-gh's
-own and the repository root's — have no drift. Which of these run is decided by the
+own and the repository root's — have no drift. `docs` builds the site with
+`properdocs build --strict`, and `ci-result` ("CI result") fails unless every job
+succeeded or was skipped. The develop ruleset requires `gates`, `Lint and static gates`,
+`No-loss property suite (10,000 examples)`, both `VS Code extension` jobs, `No skip markers`
+and `CI result` (`.vibey-gh.toml [rulesets.integration]`). Which of these run is decided by the
 `plan` job (`vibey-gh ci-areas` over `.github/ci-areas.toml`): a pull request into
 develop runs only the jobs its diff can affect, on a small matrix; the merge queue,
 anything aimed at main, and the nightly `schedule` (06:17 UTC, on develop's tip) run
@@ -334,6 +384,8 @@ the last green nightly, and a red one keeps one tracking issue open (`nightly-re
 | Picking the project up cold: self-contained prompts to resume, keep green, release, triage, research, hand over or rebuild it (sub-doctrine 10.l) | `docs/continuation/` |
 | Every CLI command, subcommand, flag, default | `docs/reference/cli.md` |
 | Full `vibey.toml` schema | `docs/reference/configuration.md` |
+| The hub's HTTP API (`/api/v1`, scopes, pairing) | `docs/reference/hub-api.md` |
+| Driving vibey from an editor or another LLM (ACP, MCP, `vibey connect`) | `docs/guides/acp.md` |
 | Full architecture | `docs/plans/architecture-and-roadmap.md` |
 | Domain model | `docs/plans/domain-model.md` |
 | Data model | `docs/plans/data-model.md` |

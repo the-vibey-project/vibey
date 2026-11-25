@@ -6,14 +6,16 @@
 Orchestrates claudeloop and codexloop (plus the local
 runner's two engines: `gptossloop`, the sovereign default on GPT-OSS 20B, and opt-in
 `qwenloop` on Qwen) via PostgreSQL queue with lossless handoff. All three runners live in
-this repository under `src/vibey_runners/`. Facts only —
-procedures live in `.agent/rules/`
-(mirrors of `.claude/skills/` and `.cursor/rules/`).
+this repository under `src/vibey_runners/`. One package, `vibey-engine` (the apps ship as
+`krypton-app`); Python 3.12+; version held below 1.0 by `[version] max_major = 0`.
+Context-bearing material follows the microslice contract of ADR-0075
+(`docs/context-microslices.md`). Facts only — procedures live in `.agent/rules/`
+(mirrors of `.claude/skills/`, `.cursor/rules/` and `.agents/skills/`).
 
 ## Non-negotiables
 
-- Never block on a human. `ask_question` equivalent is a parked job, not
-  stdin.
+- Never block on a human. `ask_question` equivalent is a parked job plus a
+  `human_gate` row, not stdin.
 - Credits ≠ rate-limit window. `CreditsExhausted` has no `resets_at` —
   enforced by type, property test, and DB CHECK constraint.
 - Capacity rejection outranks a completion claim.
@@ -31,8 +33,8 @@ procedures live in `.agent/rules/`
   less generic or less configurable state. ADR-0018; sub-doctrine 12.c.
 - A governing rule is a ratified sub-doctrine, or it is not a rule. File it
   under one of the sealed Twelve in `src/vibey_tools/gh/docs/doctrines.md`,
-  ratified by the operator's merge. An ADR records the decision; the canon
-  records the law. ADR-0020.
+  ratified by the operator's merge (Constitution Article II.3, under Article I.1).
+  An ADR records the decision; the canon records the law. ADR-0020.
 - CDD always encloses SDD and TDD: ground every change in the tracked
   repository, test it, inspect the evidence, and iterate toward delivery. Each
   iteration classifies convergence or divergence; divergence requires a bounded
@@ -54,7 +56,8 @@ procedures live in `.agent/rules/`
 - Unattended authority is bounded by a gate, never by judgement: a standing grant
   to act while the operator is away covers the work named and never an
   irreversible act, a protected branch written directly, or a gate routed around
-  (no `--no-verify`, no `--admin`). Overnight work lands as a pull request through
+  (no `--no-verify`, no `--admin`, no means whose purpose is to make a check stop
+  applying). Overnight work lands as a pull request through
   the merge train or it does not land. Repair is not authorship; where a lane's
   output is net-negative, revert and re-queue. Declining is a reportable outcome.
   ADR-0046; sub-doctrine 12.d.
@@ -78,21 +81,24 @@ procedures live in `.agent/rules/`
   and the watermark left unmoved, never stepped over. A figure computed over an
   unknown subset is not evidence. ADR-0048; sub-doctrine 10.g.
 - Work outlives the machine: work in progress lives on durable storage (the
-  storm home, never `/tmp` or `$TMPDIR`; the storm tools refuse volatile paths)
-  and is committed and pushed to a draft PR at least every 30–45 minutes.
-  ADR-0057; sub-doctrine 10.h.
+  storm home: `VIBEY_STORM_HOME`, else `~/git/vibey-storm` on macOS or
+  `~/.local/share/vibey/storm` on Linux; never `/tmp` or `$TMPDIR`, and the storm
+  tools refuse volatile paths with exit 78) and is committed and pushed to a draft
+  PR at least every 30–45 minutes. ADR-0057; sub-doctrine 10.h.
 - Code lives in classes, each with an interface beside it
   (`services/x.py` → `services/interfaces/x_interface.py`). Module-level
   functions are last resort with a written reason. Interfaces declare, never
   consume. New and changed code from 2026-09-15. ADR-0016; sub-doctrine 9.b.
 - TypeScript, never JavaScript: no JavaScript is written by hand, with no
   exemption for config, scripts or tests. A `.js` that must exist is compiled by
-  `tsc` from a named `.ts` and declared in `scripts/typescript_artifacts.toml`
-  (`python3 scripts/typescript_artifacts.py`). ADR-0088; sub-doctrine 9.f.
+  `tsc` from a named `.ts`, banner-marked, declared in `scripts/typescript_artifacts.toml`
+  and recompiled in CI (`tests/meta/test_typescript_artifacts.py`); regenerate with
+  `python3 scripts/typescript_artifacts.py`. ADR-0088; sub-doctrine 9.f.
 - No-loss handoff gate is not negotiable. Failed gate → retry, escalation to
   full-transcript mode, or human gate — never silent partial.
-- Every job is idempotent under replay.
-- Ledger is append-only.
+- Every job is idempotent under replay: workers die, the lease expires, and
+  another worker picks it up.
+- Ledger is append-only: no updates, no deletes; corrections are new events.
 - Conventional Commits enforced by pre-commit hook.
 - Run `git commit` and `git push` in the foreground and wait for them. Never edit a file in
   a worktree while a git hook runs there: pre-push hooks test the working tree, so a file
@@ -124,6 +130,7 @@ procedures live in `.agent/rules/`
 domain → application → infrastructure → cli, tui
                                   ▲
                           bootstrap.py
+                   (the sole composition root)
 ```
 
 Dependencies point inward. `import-linter` enforces. Four of the five layers
@@ -164,17 +171,43 @@ Interactive: ①, ③, ④, ⑥, VISUAL_DESIGN. Autonomous: ②, ⑤.
   and the paid pool is the fallback when no local engine is eligible (ADR-0038,
   amending ADR-0015). With no `--provider`, DESIGN and DECOMPOSE run on the
   sovereign gptossloop providers (ADR-0027, ADR-0038, ADR-0064). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
+- **Sovereign default model:** Heretic v2 of GPT-OSS 20B (Ollama tag
+  `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`), not stock
+  `gpt-oss:20b`; `VIBEY_SOVEREIGN_MODEL=heretic|stock` picks the build and
+  `VIBEY_OLLAMA_MODEL` overrides it. ADR-0099.
+- **Two loops** (8.c): `sovereignloop` (LOCAL tier, the default) and `paidloop`
+  (PAID tier, default engine `claudeloop`); one locked capability bundle across
+  both (`vibey loops`, ADR-0103).
 - **Handoff:** when `CreditsExhausted`, vibey verifies brief against no-loss
   gate (10 rules: R1–R10), writes full ledger to receiving worktree, seeds
   next engine.
 
+## Hub, MCP and ACP
+
+- **Hub:** `vibey serve` (ADR-0068), `/api/v1` on loopback `127.0.0.1:8765`; a LAN
+  address needs `--host` and `[hub] lan = true`. `vibey hub start|stop|status|pair|devices|revoke`;
+  devices pair with a 120-second 6-digit code and sign every request (ADR-0071).
+- **Scopes:** host token `<state_dir>/token` holds every scope; the agent token
+  `<state_dir>/agent.token` holds `[hub] agent_scopes` (default `view`, `answer`,
+  `run`, `acp_sessions`, `web`; never `spend`, `bump`, `workflows`). Nothing in
+  `NEVER_FROM_THE_HUB` is reachable from the hub (`domain/hub_scope.py`).
+- **Other tools:** `vibey mcp` (stdio MCP over the hub, ADR-0100), `vibey acp` (ACP
+  agent plus user services, ADR-0101), `vibey connect` (writes the registration for
+  Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI or Zed).
+- `vibey -v` prints the versions; verbose is `-d` (`-dd`, `-ddd`).
+
 ## Commands
 
 ```bash
-# Once per clone (its worktrees share it), before the first commit: the commit hooks.
-# Without them nothing adds the `Made-With:` trailer, and CI's Provenance check fails
-# the pull request after the push. Safe to re-run; `uv run vibey-gh check` says if it held.
-uv run vibey-gh install
+# Once per clone (its worktrees share it), before the first commit: the whole contributor
+# environment in one idempotent command -- `uv sync --extra dev`, the pre-commit framework's
+# pre-commit, commit-msg and pre-push hooks, then vibey-gh's provenance hooks, a check that
+# the test database is reachable, and an advisory `vibey doctor`. `vibey-gh install` alone
+# installs only the provenance hooks: no local gate then runs on commit or push. Without the
+# provenance hooks nothing adds the `Made-With:` trailer, and CI's Provenance check fails the
+# pull request. Safe to re-run; `--check` changes nothing; `uv run vibey-gh check` says if the
+# hooks held.
+uv run --extra dev vibey-gh setup
 
 # CI job `uv-lock` (runs first)
 uv lock --check
@@ -202,11 +235,15 @@ uv run bandit -q -r src/vibey
 uv run pip-audit --skip-editable
 
 # CI job `tools`: each tool's own suite, plain pip, on Python 3.12, 3.13 and 3.14
-(cd src/vibey_tools/gh && pip install -e ".[dev]" && python -m pytest -q)
-(cd src/vibey_tools/skills && pip install -e ".[dev]" && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests)
+# (rows: the plan job's `tools_matrix`, from .github/ci-matrices.toml)
+(cd src/vibey_tools/gh && pip install -e ../../vibey_runners/common && pip install -e ".[dev]" && python -m pytest -q)
+(cd src/vibey_tools/skills && pip install -e ".[dev]" && python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests)
 (cd src/vibey_tools/bootstrap && pip install -e ../gh && pip install -e ".[test,all]" && pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term)
+(cd src/vibey_runners/common && pip install -e ".[dev]" && mypy --strict src/vibey_runners/common && lint-imports && python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov=vibey_runners.common.jsonrpc --cov=vibey_runners.common.mcp --cov-branch --cov-fail-under=100)
 # ...and on each tenant's floor row, its own static gates (the row's `static` key), e.g.
 (cd src/vibey_runners/claude && pip install -e ../common && pip install -e ".[dev]" && mypy --strict src/claudeloop && lint-imports && bandit -q -r src/claudeloop)
+# (3.12 rows also: skills `mypy --strict --explicit-package-bases src`; bootstrap `.[test,all,dev]`,
+# `mypy vibey_bootstrap/` and `bandit -r vibey_bootstrap/ -ll -q`)
 
 # CI job `tools-lint`: vibey-gh's own linters
 (cd src/vibey_tools/gh && python -m black --check vibey_gh test && isort --check-only vibey_gh test && python -m mypy vibey_gh)
@@ -222,7 +259,11 @@ step asserts one claim the Dockerfile makes), `chart` (Helm lint and golden
 render of every profile) and `cluster-smoke` (Helm install on minikube; each
 `Contract - …` step asserts one cluster behaviour). `tools-lint` additionally
 checks that both rendered copies of vibey-gh's managed automation — vibey-gh's
-own and the repository root's — have no drift. Which of these run is decided by the
+own and the repository root's — have no drift. `docs` builds the site with
+`properdocs build --strict`, and `ci-result` ("CI result") fails unless every job
+succeeded or was skipped. The develop ruleset requires `gates`, `Lint and static gates`,
+`No-loss property suite (10,000 examples)`, both `VS Code extension` jobs, `No skip markers`
+and `CI result` (`.vibey-gh.toml [rulesets.integration]`). Which of these run is decided by the
 `plan` job (`vibey-gh ci-areas` over `.github/ci-areas.toml`): a pull request into
 develop runs only the jobs its diff can affect, on a small matrix; the merge queue,
 anything aimed at main, and the nightly `schedule` (06:17 UTC, on develop's tip) run
@@ -238,10 +279,12 @@ the last green nightly, and a red one keeps one tracking issue open (`nightly-re
 | Comprehensive architecture diagram | `docs/project.mmd` |
 | Formal model (research paper) | `docs/paper.md` — https://the-vibey-project.github.io/vibey/main/paper/ · https://the-vibey-project.github.io/vibey/main/paper.pdf |
 | Documentation as a book | https://the-vibey-project.github.io/vibey/main/book.pdf · https://the-vibey-project.github.io/vibey/main/book.epub · https://the-vibey-project.github.io/vibey/main/book-print.html |
-| Governing law (doctrines, constitution) | `src/vibey_tools/gh/docs/doctrines.md` |
+| Governing law (doctrines, constitution) | `src/vibey_tools/gh/docs/doctrines.md`, `constitution.md` (index: `src/vibey_tools/gh/corpus-index.json`) |
 | Picking the project up cold (sub-doctrine 10.l) | `docs/continuation/` |
 | CLI reference | `docs/reference/cli.md` |
 | `vibey.toml` schema reference | `docs/reference/configuration.md` |
+| Hub HTTP API | `docs/reference/hub-api.md` |
+| Driving vibey from an editor or another LLM | `docs/guides/acp.md` |
 | Architecture | `docs/plans/architecture-and-roadmap.md` |
 | Domain model | `docs/plans/domain-model.md` |
 | Handoff protocol | `docs/plans/handoff-protocol.md` |
@@ -254,6 +297,9 @@ the last green nightly, and a red one keeps one tracking issue open (`nightly-re
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |
 | Security policy and disclosure | `SECURITY.md` |
+
+When a skill or procedure changes, update the Claude, Cursor, Codex and Antigravity
+trees in the same PR.
 
 <!-- vibey:begin -->
 This section is generated by vibey. Do not edit inside these markers --

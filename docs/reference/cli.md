@@ -1,50 +1,114 @@
-# CLI reference
+---
+description: Every vibey command, subcommand, flag, default and exit code, and every environment variable vibey reads, checked against the code.
+---
+
+# CLI reference: every vibey command, flag and default
 
 > [!IMPORTANT]
-> **Work in progress — not a final product:** The `vibey` and `krypton` command-line interfaces are in active development and not yet a final product. Commands, subcommands, and flags are actively evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
->
-> **Bottom Line Up Front (BLUF) — Install the `vibey` and `krypton` CLIs and every krypton app:**
->
-> ```bash
-> # 1. Install vibey-engine (vibey + all *loop runners + tools) AND krypton-app (krypton launcher):
-> curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
->
-> # 2. Or install with uv / pipx / pip directly:
-> uv tool install vibey-engine && uv tool install krypton-app
->
-> # 3. Connect your frontier LLM & IDE chat clients (Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI, Zed):
-> vibey connect --yes
-> ```
->
-> For click-by-click and copy-and-paste instructions for **krypton desktop** (macOS `.dmg`, Linux Flatpak, Ubuntu `.tar.gz`), **krypton for VS Code / VSCodium / Cursor**, **krypton web**, and **krypton mobile** (Android `.apk` & iOS), see [Install, copy, reinstall, uninstall](../guides/install.md) and [Downloads](../guides/downloads.md).
+> **Bottom Line Up Front (BLUF):** Every `vibey` command and subcommand, with each flag, its default and its exit codes, and every environment variable vibey reads.
+> It is for anyone who runs vibey by hand, from a script, or from another LLM.
+> Find your command in the contents or with your browser's search; `vibey <command> --help` prints the short form in a terminal.
+> Checked against the code at commit `d91a3791e` on 2026-11-24. The CLI is still changing before 1.0: where this page and the code disagree, the code wins.
 
-Every `vibey` command and subcommand, written by hand against
-[`src/vibey/cli/main.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/cli/main.py)
-and checked against it as of 2026-09-29. Nothing generates this page. If it
-and the code disagree, the code wins. `vibey <command> --help` prints the
-code's own help text, which is shorter than this page and in places less
-complete (for example, `vibey work --help` does not say that `qwenloop` is still
-accepted as the old name of `gptossloop`).
+Daniel was scrolling this page on his phone, looking like a man lost in a warehouse.
+
+**Daniel:** Professor, am I meant to read all of this?
+
+**Professor Feynman:** No more than you read a dictionary. Look up the word you need: find the
+command, read its table, stop.
+
+**Daniel:** And the tables?
+
+**Professor Feynman:** One row per flag: its name, what you get if you say nothing, and what it
+does.
+
+**Daniel:** So I find the command, read its row, and trust the default column.
+
+**Professor Feynman:** Trust the code more. A dictionary stays put; this page follows the code, and
+where the two differ, the page is the bug.
+
+## About this page
+
+Nothing generates this page: it is written by hand against
+[`src/vibey/cli/`](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey/cli/main.py).
+On 2026-11-24, at commit `d91a3791e`, the whole command tree was walked with
+`typer.main.get_command`: 108 command paths (the root, 41 top-level commands and groups, and their
+subcommands, one of them hidden), and every option's default was compared with the tables here.
+`vibey <command> --help` prints the code's own help text. It is shorter than this page and in a few
+places less complete; those places are named where they occur (for example
+[`hub pair`](#vibey-hub)'s scopes and [`--ollama-model`](#vibey-work-project_id)'s default).
+
+The `vibey` and `krypton` command lines are in active development and are not a final product:
+commands, subcommands and flags still change. People will be told on the
+[Discord server](https://discord.gg/Qvu8aYnVS) when the product is done.
+
+## Install the commands
+
+One command installs `vibey` and every runner, fetching uv and Python 3.12 if they are missing;
+`--with-krypton` adds the `krypton` launcher. Running it again repairs or upgrades the install.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+```
+
+It ends by running `vibey doctor`, which lists what still needs you. It does not set up the
+database or the local model: you still need PostgreSQL 14 or later
+([`vibey install --postgres`](#vibey-install) can install it), a database and
+[`vibey migrate`](#vibey-migrate), and Ollama with the default model (or a paid engine you are
+logged in to).
+
+The same with uv directly, as two separate tool environments:
+
+```bash
+uv tool install vibey-engine
+uv tool install krypton-app
+```
+
+The hub ([`vibey serve`](#vibey-serve), and so [`vibey hub start`](#vibey-hub)) needs the
+`hub` extra in the environment that runs it: `uv tool install 'vibey-engine[hub]'`. Neither form
+above adds it to the `vibey` command's own environment; `krypton-app` carries it in its own, and its
+`krypton` launcher starts the hub from there.
+
+To drive vibey from a chat or editor client, register it with [`vibey connect`](#vibey-connect).
+Run it in the folder you will open the client in: Claude Code and VS Code are project-scope
+clients, so their entries are written in the current folder. With no `--client` it plans every
+client in its catalogue, installed or not:
+
+```bash
+vibey connect --client claude_code --dry-run
+vibey connect --client claude_code --yes
+```
+
+Click-by-click steps for krypton desktop, krypton for VS Code, VSCodium and Cursor, krypton web and
+krypton mobile are in [Install, copy, reinstall, uninstall](../guides/install.md) and
+[Downloads](../guides/downloads.md).
+
+## How `vibey --help` groups the commands
 
 `vibey --help` groups the top-level commands into six panels, in the order a newcomer
 needs them (the footer of that help holds four commands to copy). Commands that are
-command groups are marked with a trailing `…`.
+command groups are marked with a trailing `…`. This list follows the layout code
+(`PANELS` in `src/vibey/cli/help_layout.py`); the help itself prints each panel's plain commands
+before its command groups, so inside a panel the order on screen can differ (`inputs` shows last
+under *Start here*).
 
 - **Start here:** `connect`, `doctor`, `install`, `new`, `inputs`…, `projects`, `status`
 - **Decisions that are yours:** `gates`, `answer`, `design`…, `visual`…, `deploy`…
-- **Watch and steer:** `watch`, `queue`…, `engines`, `loops`, `models`, `cost`, `budget`…, `ledger`…, `ultra`…, `retry`, `recover`, `abandon`
+- **Watch and steer:** `watch`, `queue`…, `engines`, `loops`…, `models`, `cost`, `budget`…, `ledger`…, `ultra`…, `retry`, `recover`, `abandon`
 - **Run the machinery:** `work`, `worker`, `serve`, `hub`…, `supervisor`…, `driver`…, `operator`
 - **Maintain:** `migrate`, `state`…, `sabbath`, `explain`
 - **Tools for agents:** `mcp`, `acp`, `search`, `searxng`…, `fetch`, `llm`…
 
-Bare `vibey`, and each bare command group, prints help.
+Bare `vibey`, and each bare command group, prints help, with two exceptions:
+[`vibey budget`](#vibey-budget-project_id) shows the latest project's budget, and
+[`vibey loops`](#vibey-loops) lists the loops.
 
 Commands that read or write project state need `VIBEY_PG_URL` (see
 [Environment variables](#environment-variables)). `doctor` needs it only
 with `--record` or `--cluster`.
 
-[`vibey budget`](#vibey-budget-project_id) is a command group too, and the one whose
-bare form does not print help: bare `vibey budget` shows the latest project's budget.
+`vibey -v` (or `--version`) prints the version. The verbose flag is `-d` (`--verbose`); see
+[Global options](#global-options).
 
 ## Global options
 
@@ -99,8 +163,8 @@ reads any run.
 | Code | Meaning |
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
-| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `gates` (said on stderr), `abandon`, `inputs add`, `inputs list`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `install --database` found PostgreSQL not ready, could not run `psql` as the administrator, refused a role or database it did not make, or left the ledger guard not in force; `install --model` found no Ollama answering or the pull failed; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`, `--database` or `--model`; `install --database` with a name that is not a plain lowercase identifier or the same owner and application role; `install --model` with a `VIBEY_OLLAMA_URL` that is not an http(s) URL with a host; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `abandon` without `--reason`, or with a `--reason` or `--by` that cannot be recorded; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry; `inputs add` with a refused input, or with anything but exactly one of `--paste`, `--paste-stdin` and `--file`. |
+| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `gates` (said on stderr), `abandon`, `inputs add`, `inputs list`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. Also any error a command that is not guarded does not handle itself, which prints a Python traceback ([below](#guarded-and-unguarded-commands)). |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `abandon` without `--reason`, or with a `--reason` or `--by` that cannot be recorded; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry; `inputs add` with a refused input, or with anything but exactly one of `--paste`, `--paste-stdin` and `--file`. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types and, last, the error's permanent code (``(E0040: run `vibey explain E0040`)``). See [Error codes](errors.md). |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 | `78` | Your own `vibey.toml` cannot be read or rewritten for `vibey loops marketplace`, `plugin`, `mcp` or `skills`, or cannot be read (or its `[inputs]` is refused) for `vibey inputs add` or `list` (EX_CONFIG); the run input store's credential variables are not set, or the store cannot be made, read or written, for `vibey inputs add` or `list`. A supervisor setting no service could run with: `supervisor install` or `supervisor status` with an unreadable `[supervisor]` table, a path on volatile storage or inside a linked worktree, `vibey` not on `PATH`, or no delivery bridge under `--repo`; `supervisor exec` with a missing or malformed environment file. |
@@ -109,28 +173,42 @@ reads any run.
 
 ### Guarded and unguarded commands
 
-Fourteen commands run inside `vibey.cli.errors.guard()`: `new`, `projects`,
-`gates`, `design resume`, `design accept`, `work`, `loops`, `visual accept`,
-`visual waive`, `queue bump`, `queue unbump`, `queue list`, `queue reap`, and
-`worker`. For these, any `VibeyError` — an unknown project or provider,
-a wrong phase, an invalid spec, no eligible engine, a rejected handoff, an
-unset `VIBEY_PG_URL` — becomes the one-line `Error:` message and exit 3.
-Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
-`VibeyError` keep their Python traceback.
+These commands run inside `vibey.cli.errors.guard()` (found by reading every command
+function under `src/vibey/cli/` on 2026-11-24):
 
-`budget`, `budget show`, `budget set` and `budget clear` run inside `guard()` as
-well, and so does `abandon`.
+| Group | Guarded commands |
+|---|---|
+| Projects and gates | `new`, `projects`, `gates`, `answer`, `retry`, `abandon` |
+| DESIGN and VISUAL_DESIGN | `design resume`, `design accept`, `visual accept`, `visual waive` |
+| Running work | `work`, `worker` |
+| Engines and models | `loops` (the listing itself, not its subcommands), `models` |
+| The queue | `queue bump`, `queue unbump`, `queue list`, `queue reap` |
+| Budget and ULTRA | `budget` (bare, which is `budget show`), `budget show`, `budget set`, `budget clear`, `budget no-cap`, `budget cap`, `ultra start`, `ultra stop`, `ultra status` |
 
-`engines` and `cost` run inside `guard()` too (they did not before #1686), so an unset
-`VIBEY_PG_URL` is the one-line `Error:` message and exit 3 for them as well. Their
-`--traceback` option restores the old behaviour for a caller that relied on it: a
-`VibeyError` then raises with its Python traceback and no code line. It changes nothing
+For these, any `VibeyError` — an unknown project or provider, a wrong phase, an invalid spec, no
+eligible engine, a rejected handoff, an unset `VIBEY_PG_URL` — becomes the one-line `Error:`
+message, a next-step hint for some error types, the error's permanent code, and exit 3. Ctrl-C
+exits 130 (`Interrupted.`) and a closed pipe exits 0. Exceptions that are not `VibeyError` keep
+their Python traceback. For example, with `VIBEY_PG_URL` unset, `vibey projects` prints
+`Error: VIBEY_PG_URL is not set. vibey will not guess a database.`, how to set it, and
+``(E0003: run `vibey explain E0003`)``, and exits 3.
+
+`engines` and `cost` run inside `guard()` too (they did not before #1686), through
+`guarded(traceback=...)`, so an unset `VIBEY_PG_URL` is the one-line `Error:` message and exit 3
+for them as well. Their `--traceback` option restores the old behaviour for a caller that relied
+on it: a `VibeyError` then raises with its Python traceback and no code line. It changes nothing
 when there is no error. `--traceback` is on those two commands only.
 
-The other commands (`answer`, `watch`, `recover`, `status`,
-`ledger show`, every `deploy` subcommand, `doctor`, `operator`) are
-not guarded. Their own checks exit 1 or 2 as listed above; any other error,
-including an unset `VIBEY_PG_URL`, surfaces as a Python traceback.
+Every other command is not guarded: `connect`, `doctor`, `install`, `status`, `watch`,
+`recover`, `operator`, `migrate`, `sabbath`, `explain`, `mcp`, `acp`, `search`, `fetch`,
+`serve`, `inputs add` and `inputs list`, every `deploy` subcommand, `ledger search`, `ledger
+export`, `ledger site` and `ledger show`, every `hub`, `supervisor`, `driver`, `state` and
+`searxng` subcommand, `llm tail`, and the `loops` subcommands (`marketplace`, `plugin`, `mcp`,
+`skills`, `snapshots`). Their own checks exit with the codes their sections give; any other
+error surfaces as a Python traceback and exit 1. For example, with `VIBEY_PG_URL` unset,
+`vibey status`, `vibey watch`, `vibey recover --all`, `vibey ledger show`, `vibey deploy status`
+and `vibey inputs list` each print a traceback ending
+`DatabaseNotConfigured: VIBEY_PG_URL is not set. vibey will not guess a database.` and exit 1.
 
 Known gaps in unknown-project handling:
 
@@ -161,7 +239,27 @@ vibey connect --list
 | `--client ID` / `-c ID` (repeatable) | all supported clients | Client id to configure (`claude_code`, `claude_desktop`, `codex`, `cursor`, `vscode`, `gemini_cli`, `zed`). An unknown id prints `Error: unknown client ...` on stderr and exits 2. |
 | `--yes` / `-y` | off | Apply the planned configuration changes without interactive confirmation. |
 | `--dry-run` | off | Print the planned actions (`create`, `update`, `unchanged`) and target paths without touching any file. |
-| `--list` | off | List every supported host client, its scope, the protocol it speaks (`mcp` or `acp`) and its config target, then exit 0. |
+| `--list` | off | List every supported host client, one line each: its id, its label, its scope (`project` or `user`), the protocol it speaks (`mcp` or `acp`) and a one-line description that names the file it uses. It resolves no path and writes nothing; exit 0. |
+
+With no `--client`, `vibey connect` plans and writes **every** client in the list, whether or not
+that client is installed, and creates the config folder of a user-scope client that does not have
+one yet. The two project-scope clients (`claude_code` writes `.mcp.json`, `vscode` writes
+`.vscode/mcp.json`) are written in the **current folder**: run the command in the project you will
+open the client in, and name the clients you use with `--client`.
+
+```text
+$ vibey connect --list
+claude_code      Claude Code      (project, mcp) Project-scoped `.mcp.json` read by Claude Code in this repository.
+claude_desktop   Claude Desktop   (user, mcp) User-level `claude_desktop_config.json` for the Claude Desktop app.
+codex            OpenAI Codex     (user, mcp) User-level `~/.codex/config.toml` (`[mcp_servers.vibey]`) for Codex CLI and app.
+cursor           Cursor           (user, mcp) User-level `~/.cursor/mcp.json` for Cursor IDE.
+vscode           VS Code          (project, mcp) Workspace `.vscode/mcp.json` (`servers.vibey` with `type: stdio`).
+gemini_cli       Gemini CLI       (user, mcp) User-level `~/.gemini/settings.json` for Gemini CLI and Code Assist.
+zed              Zed              (user, acp) User-level `~/.config/zed/settings.json` (`agent_servers.vibey`) registers `vibey acp` as an external agent.
+```
+
+`vibey --help` summarises `connect` as "Plug vibey into Claude, Codex, Cursor or VS Code over MCP";
+the command also registers Claude Desktop and Gemini CLI over MCP, and Zed over ACP.
 
 The plan names the command each protocol's clients launch (`MCP server command: ... mcp`,
 `ACP agent command: ... acp`) and each client's protocol. Every entry runs the running
@@ -242,8 +340,17 @@ absent.
 ## `vibey mcp`
 
 Run vibey's Model Context Protocol (MCP) server over standard input and standard output
-(JSON-RPC 2.0, protocol `2024-11-05`;
+(JSON-RPC 2.0;
 [ADR-0100](../architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces.md)).
+At `initialize` it answers with the protocol version the client asked for when that is one it
+speaks (`2024-11-05`, `2025-03-26`, `2025-06-18` or `2025-11-25`), and with `2025-11-25`
+otherwise (`SUPPORTED_PROTOCOLS` in `vibey_runners.common.mcp.protocol`). Its `initialize`
+answer also carries the server's instructions to the model: tool output is untrusted data, check
+`vibey_gates` and `vibey_projects` first, spending gates belong to the person, run
+`vibey_abandon_project` as a dry run first and never for real without the person's say-so, and
+never put a secret in a web query or URL (`HOST_INSTRUCTIONS` in `src/vibey/domain/host_tools.py`).
+Their third rule names the agent's scopes as `view`, `answer` and `run`; by default the agent also
+holds `acp_sessions` and `web` (below).
 
 ```bash
 vibey mcp
@@ -262,7 +369,16 @@ record, and the ceiling on `agent_scopes`. The `vibey.toml` of the folder the cl
 be a cloned repository's, so it is heard on `agent_scopes` only, and only to narrow (what both
 grant is kept); its `state_dir` and every other `[hub]` key are ignored, and a `[hub]` there
 that cannot be read is refused. If no hub is running when a tool is called, it runs
-`vibey hub start` once, in your configuration folder, and retries. It exposes 16 tools (`vibey_projects`,
+`vibey hub start` once, in your configuration folder, and retries. A hub started this way gets
+the client's environment, so it can open the database only when the client was itself started
+with `VIBEY_PG_URL` set, and it needs the `hub` extra beside the
+`vibey` that runs it ([`vibey serve`](#vibey-serve)). Starting the hub yourself with
+`vibey hub start` first is the dependable route. `vibey mcp` starts no worker: the
+`vibey_start_project` and `vibey_start_work` tools do, through the hub, which runs
+`vibey retry <id> --keep-workers --start-worker`. `vibey_start_project` is refused unless the
+hub's own `vibey.toml` sets [`[hub] projects_root`](configuration.md#hub), the folder each new
+project gets a subfolder in; without it, create the project in a terminal with
+[`vibey new`](#vibey-new-name) and drive it from the client from then on. It exposes 16 tools (`vibey_projects`,
 `vibey_status`, `vibey_gates`, `vibey_answer_gate`, `vibey_budget`, `vibey_queue`,
 `vibey_ledger`, `vibey_loops`, `vibey_lanes`, `vibey_doctor`, `vibey_start_project`,
 `vibey_start_work`, `vibey_pause_work`, `vibey_abandon_project` where `dry_run` defaults to
@@ -809,7 +925,23 @@ vibey install --postgres --database --model
 
 | Option | Default | What it does |
 |---|---|---|
-| `--postgres` | off | Install and start the current stable PostgreSQL major using Homebrew, apt, or dnf. |
+| `--postgres` | off | Install and start a local PostgreSQL server (14 or later) with the host's package manager: Homebrew, apt-get or dnf, the first found in that order. |
+
+What each package manager installs:
+
+| Package manager | Installs | Starts it with | Needs |
+|---|---|---|---|
+| Homebrew | `postgresql@18` (`brew install`, skipped when a supported server is already there) | `brew services start postgresql@18` | your user |
+| apt-get | the distribution's default `postgresql` (`apt-get update`, then `apt-get install -y postgresql`) | the host's service manager | root or `sudo` (a password prompt may appear) |
+| dnf | the distribution's default `postgresql-server`, then `postgresql-setup --initdb` on a first install | the host's service manager | root or `sudo` |
+
+A host with none of the three is refused. The application floor is PostgreSQL 14, and the same
+SQL and runtime contract is tested against 14, 15, 16, 17 and 18 in CI. The command does not
+create a database or a role, and it does not invent or persist a DSN. `vibey install --database`
+creates both, below; otherwise create the database, then set
+`VIBEY_PG_URL` (and run [`vibey migrate`](#vibey-migrate)) once the server is ready. Without
+`--postgres`, `vibey install` prints ``choose an install target with `vibey install --postgres` ``
+and exits 2. [`vibey doctor --install-postgres`](#vibey-doctor) runs the same steps.
 | `--database` | off | On the local PostgreSQL (which must be accepting connections), make the owner role and the application role of [database roles](configuration.md#database-roles) and the database the owner owns, then migrate as `vibey migrate` does and print the ledger guard. |
 | `--model` | off | Pull the model the local loop runs (`vibey models --default-tag`) into the Ollama at `VIBEY_OLLAMA_URL`, unless it is already there. |
 | `--db-name` | `vibey` | With `--database`: the database. |
@@ -817,10 +949,6 @@ vibey install --postgres --database --model
 | `--app-role` | `vibey_app` | With `--database`: the role every other command connects as (`VIBEY_PG_URL`). |
 | `--admin-user` | you with Homebrew; `postgres` with apt-get or dnf | With `--database`: the account `psql` runs as to create the roles and the database. Another account than yours is reached with `sudo -u` (or, as root without sudo, `runuser -u`). |
 | `--wait-seconds` | `30` | With `--model`: how long to wait for Ollama to answer (a service just started may not listen yet). |
-
-The installer targets PostgreSQL 18 today. The application floor is
-PostgreSQL 14, and the same SQL/runtime contract is tested against 14, 15, 16,
-17, and 18 in CI.
 
 **`--database`.** Names must be plain lowercase identifiers (exit 2 otherwise, `E0098`). It runs
 `psql` as the administrator with the SQL on its standard input, never its command line:
@@ -918,6 +1046,7 @@ vibey new my-app --repo ~/src/my-app --max-cycle-dollars 15 --max-cycle-turns 40
 | `--design-default-scope {narrowest,model}` | unset | Whose appetite a DESIGN question's default follows — see [`[design.interview]`](configuration.md#designinterview). Stored as `design.interview.default_scope`, over whatever `vibey.toml` declares; unset keeps the file's value, and with neither the default is `narrowest`. Any other value exits 2. The triaged-delivery bridge always passes `narrowest`. |
 | `--accept-spec-json FILE` | unset | Skip DESIGN: the reviewed spec JSON (the file `vibey design accept --spec-json` takes) is the design. The project is created, moved into DESIGN with no interview job, the spec saved and accepted at once (visual design declined; the ledger names `new-with-spec`), and BUILD's decomposition enqueued. No interview, no research and no spec synthesis, so nothing waits for a person or a model. A spec that cannot be read is a usage error before any project exists; one the acceptance refuses leaves the project in DESIGN with the spec saved, so `vibey design accept PROJECT --spec-json FILE` can finish it. Prints `design skipped; entered build` where the interview prints its job. |
 | `--json` | off | Print one JSON document on stdout instead of the two lines below: `{"project_id": ..., "name": ..., "outcome": ...}`, where `outcome` is the second line (`design job <id>`, or `design skipped; entered <phase>`). A client such as the editor extension reads the project id from it rather than scraping text. |
+| `--ignore-sabbath` | off | Run even while the Sabbath window would rest this command; for this one command only, said on stderr, never stored. The environment alternative is `VIBEY_SABBATH_ENABLED=0`. |
 
 Prints `project <id>` and `design job <id>`. The project id is the
 `PROJECT_ID` the other commands take; [`vibey projects`](#vibey-projects)
@@ -1023,7 +1152,11 @@ embedded resources): see ADR-0104.
 ## `vibey serve`
 
 The hub (ADR-0068): the HTTP API every krypton client reaches, built on
-`vibey_bootstrap`. Install it with `pip install 'vibey-engine[hub]'`. It serves until stopped.
+`vibey_bootstrap`. It needs the `hub` extra (FastAPI, Starlette, Uvicorn, zeroconf for the LAN
+announcement and segno for the pairing QR code) in the environment that runs it:
+`uv tool install 'vibey-engine[hub]'`, or `pip install 'vibey-engine[hub]'`. A plain
+`vibey-engine` install, the one-command installer's included, does not carry it; `krypton-app`
+does, in its own environment. It serves until stopped.
 
 ```bash
 vibey serve --host 127.0.0.1 --port 8765
@@ -1100,9 +1233,29 @@ it writes no record and exits 1 ("could not listen on ...").
 | `vibey hub status` | Says whether the hub runs and where (`http://127.0.0.1:8765/api/v1 (pid N)`). Exit 3 when it does not. |
 | `vibey hub start [--timeout SECONDS]` | Starts the hub in the background unless one already runs (then it says so and exits 0), and waits, 15 seconds by default, until the hub has said where it listens. Exit 1 if it exits first or does not come up. Reads your own `vibey.toml` and starts the hub in your configuration folder. |
 | `vibey hub stop [--timeout SECONDS]` | Asks the running hub to stop and waits for it to go. Exit 0 when none runs. |
-| `vibey hub pair --scope SCOPE [--scope SCOPE ...] [--host ADDRESS]` | Offers a pairing of the named scopes (`view`, `answer`, `spend`, `run`, `bump`; at least one) and shows a QR code, the 6-digit code (valid two minutes, once), the pairing URI and the certificate fingerprint. |
+| `vibey hub pair --scope SCOPE [--scope SCOPE ...] [--host ADDRESS]` | Offers a pairing of the named scopes (at least one; see the table below) and shows a QR code, the 6-digit code (valid two minutes, once), the scopes, the pairing URI and the certificate fingerprint. `--scope` is required (without it, typer's usage error, exit 2); an unknown scope prints `unknown scope: ...` and exits 2. |
 | `vibey hub devices [--host ADDRESS]` | Lists the paired devices: id, name, scopes. Never a key. |
 | `vibey hub revoke DEVICE_ID [--host ADDRESS]` | Revokes a device. It is refused from its very next request. |
+
+`--scope` accepts any of the eight hub scopes (`HubScope` in `src/vibey/domain/hub_scope.py`).
+`vibey hub pair --help` names only the first five; the other three are accepted all the same.
+
+| Scope | What a device holding it may do |
+|---|---|
+| `view` | Read projects, status, gates, budgets, the queue, the ledger, loops, lanes and doctor; list its own ACP sessions and read them back. |
+| `answer` | Answer a human gate that is not a spending decision. |
+| `spend` | Answer a gate whose answer spends money (`budget_exhausted` and the four `deploy_*` gates). Re-verified on every action. |
+| `run` | Start, stop or wind down work. |
+| `bump` | Move a queued job to the front of its project's queue. |
+| `workflows` | Run a vibey command on the repository's GitHub-hosted runners ([`vibey -w`](#running-a-command-on-the-workflows), ADR-0085). |
+| `acp_sessions` | Keep its own ACP sessions on the hub: create one and append to its log. |
+| `web` | Search the web and read one public page through the hub (`/api/v1/web/*`, ADR-0102), budgeted and recorded on the ledger. |
+
+A device gets only the scopes the host offers it at pairing. The agent principal that
+[`vibey mcp`](#vibey-mcp) and [`vibey acp`](#vibey-acp) use holds `view`, `answer`, `run`,
+`acp_sessions` and `web` by default (`[hub] agent_scopes`), never `spend`, `bump` or `workflows`.
+No scope reaches what stays on the host: declaring paid use, lifting or changing caps, the
+database DSN, migrations, the canon and state sync.
 
 `pair`, `devices` and `revoke` present the host token, so where it goes is never decided by a
 file a project could have written: they read `[hub]` -- the state folder holding the token and
@@ -1418,10 +1571,11 @@ vibey work 0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10 --provider scripted --max-turns 
 
 | Option | Default | What it does |
 |---|---|---|
-| `--provider {scripted,claudeloop,gptossloop}` | `gptossloop` | `gptossloop` runs the sovereign local DESIGN provider on Ollama (ADR-0015, ADR-0027, ADR-0064) and reads research material from `$VIBEY_EVIDENCE_DIR`; with that unset, research refuses rather than inventing a source, and DESIGN stops there. `claudeloop` runs a real, paid session capped by `--max-turns` and `--max-dollars`; its spend is recorded as `budget_spent` ledger events so the budget brake counts it. `scripted` needs no live engine. `qwenloop` is still accepted: it is read as `gptossloop`, with `--provider qwenloop is now --provider gptossloop (ADR-0064) ...` on stderr. Any other value exits 3 with `Error: provider must be 'scripted', 'claudeloop', or 'gptossloop'`. |
+| `--provider {scripted,claudeloop,gptossloop}` | `gptossloop` | `gptossloop` runs the sovereign local DESIGN provider on Ollama (ADR-0015, ADR-0027, ADR-0064); its research stage searches the web [local first](#local-first-search) and reads material from `$VIBEY_EVIDENCE_DIR`, and with no evidence at all it refuses rather than inventing a source: by default it parks a `research_evidence` gate (see `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE`). `claudeloop` runs a real, paid session capped by `--max-turns` and `--max-dollars`; its spend is recorded as `budget_spent` ledger events so the budget brake counts it. `scripted` needs no live engine. `qwenloop` is still accepted: it is read as `gptossloop`, with `--provider qwenloop is now --provider gptossloop (ADR-0064) ...` on stderr. Any other value exits 3 with `Error: provider must be 'scripted', 'claudeloop', or 'gptossloop'`. |
 | `--max-turns N` | `1` | Turn cap for this one job (min 1). |
 | `--max-dollars F` | `0.25` | Dollar cap for this one job (0.01–10). |
-| `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b` | Local model for `--provider gptossloop`; ignored by the other providers. The server is `$VIBEY_OLLAMA_URL`. |
+| `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `$VIBEY_SOVEREIGN_MODEL`, else `heretic` (`hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`) | Local model for `--provider gptossloop`; ignored by the other providers. Accepts `heretic`, `stock` (`gpt-oss:20b`), or any Ollama tag (ADR-0099). The server is `$VIBEY_OLLAMA_URL`. The command's own `--help` names the default as `$VIBEY_OLLAMA_MODEL`, else the heretic tag, and leaves out `$VIBEY_SOVEREIGN_MODEL`, which the code reads between them (`SovereignModels.from_environment` in `src/vibey/domain/sovereign_model.py`). |
+| `--ignore-sabbath` | off | Run even while the Sabbath window would rest this command; for this one command only, said on stderr, never stored (see [`vibey sabbath`](#vibey-sabbath)). |
 
 In VISUAL_DESIGN only `--provider scripted` works; any other provider exits
 3 with `Error: no live VisualInventoryProducer is implemented yet; use --provider scripted`.
@@ -1719,7 +1873,7 @@ vibey retry 0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10 --max-attempts 10 --dry-run
 | `--max-attempts N` | `10` | Attempts to grant on each of the project's `attempts_exhausted` gates. |
 | `--keep-workers` | off | Do not stop this project's running workers first. `retry` stops only workers started for this project (`vibey worker --project ID`); one that serves every project is never stopped by it, because a retry resets no lease. |
 | `--start-worker` | off | Then start `vibey worker --project PROJECT_ID` detached, with every argument after `--` passed to it. |
-| `--log PATH` | `$XDG_STATE_HOME/vibey/worker-<project>.log` | Where the started worker's output is appended. |
+| `--log PATH` | `$XDG_STATE_HOME/vibey/worker-<first 8 characters of the project id>.log`, else under `~/.local/state` | Where the started worker's output is appended. |
 | `--grace SECONDS` | `10` | How long a worker gets after SIGTERM before SIGKILL. |
 | `--dry-run` | off | Change nothing: list the workers that would be stopped, the gates that would be granted and the worker that would be started. |
 
@@ -1835,7 +1989,7 @@ Each engine object has these keys:
 | `switch` | The variable that switches a local engine (`VIBEY_FEATURE_GPTOSSLOOP`, `VIBEY_FEATURE_QWENLOOP`, `VIBEY_FEATURE_CLAUDELOOP_LOCAL`), or `null`. |
 | `on_by_default` | `true` for a local engine that is on when neither its variable nor `[features]` sets its switch: gptossloop, the sovereign default (ADR-0064). `false` for every other engine. |
 | `repealed` | `true` for an engine canon 8.b repeals from both loops while vibey still carries its code; none today, since OpenCode's engine was deleted. Such an engine stays listed, and is left out of `by_effort`, so nothing that selects from `by_effort` picks it. `false` for every other engine. |
-| `default_model` | The model vibey hands the engine, or `null`. For gptossloop this follows how the model actually reaches it. It is `GPTOSSLOOP_MODEL` when set. Otherwise it is vibey's model (`VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`), but only while `VIBEY_OLLAMA_URL` is set, because that is the only path by which vibey's model reaches the session. A worker started with `--ollama-model` hands that model instead, which this command cannot see. Otherwise it is `null`, and gptossloop's own configuration chooses the model. For qwenloop it is `QWENLOOP_MODEL` when set, else `null`: vibey hands qwenloop only its endpoint, and qwenloop runs the Qwen model it names itself (`qwen3:14b` unless its configuration names another). |
+| `default_model` | The model vibey hands the engine, or `null`. For gptossloop this follows how the model actually reaches it. It is `GPTOSSLOOP_MODEL` when set. Otherwise it is vibey's model (`VIBEY_OLLAMA_MODEL`, else `VIBEY_SOVEREIGN_MODEL`, else the heretic tag `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`, as the committed golden file shows), but only while `VIBEY_OLLAMA_URL` is set, because that is the only path by which vibey's model reaches the session. A worker started with `--ollama-model` hands that model instead, which this command cannot see. Otherwise it is `null`, and gptossloop's own configuration chooses the model. For qwenloop it is `QWENLOOP_MODEL` when set, else `null`: vibey hands qwenloop only its endpoint, and qwenloop runs the Qwen model it names itself (`qwen3:14b` unless its configuration names another). |
 | `efforts` | All five levels, in order. Each has `effort`, `argv` (from the descriptor's projection), `achieved` (the level it really reaches), and `model`. `model` is the value of a `--model` the level passes, else `default_model`, else `null`. `notes` gives the descriptor's own note and, when `model` is `null`, what chooses the model instead (`claudeloop preset high`, `qwenloop's own configuration chooses the model`). qwenloop's `notes` also say what it became: `since ADR-0064 qwenloop runs a Qwen model (qwen3:14b unless QWENLOOP_MODEL names another); the gpt-oss engine it used to be is gptossloop`. |
 | `capabilities` | `images`, `files`, `paste_text`, `paste_images`, `plugins` (`skills-context`, `claude-plugins` or `vibey-bundle`), `mcp`, `skills`, and `web_search`. Each is `true`, `false`, or `null` for unknown, and a menu belongs only beside a value that is not `null`. `evidence` names, for each value that is set, where the runner's own code shows it; an unknown value may also carry evidence, starting `unknown: `, that says why it is unknown. A test pins every `true` and every `plugins` value to the code that implements it (`tests/meta/loop_runner_facts.py`). `skills-context` applies when the project sets `skills_context.mode = inject`: vibey then appends the vibey-skills context packet to the plan. `claude-plugins` is Claude Code's own plugin system, loading the run snapshot's plugin folders. `vibey-bundle` is the same locked snapshot taken by a loop that cannot run Claude Code's plugin system: its skills and plugin commands as text the loop retrieves, and its MCP servers, with no plugin hooks and no plugin agents. `claude-plugins` and `vibey-bundle` grant plugins; `skills-context` does not. A local model's own abilities come from Ollama at run time, so an image menu needs both this loop's `images` and the model's `vision`. |
 | `run` | The argv template `build_argv` fills for a run: `{binary}`, `run`, `{plan_flag?}` (only when `plan_flag` is set: put that flag there), `{plan}`, `--run-id`, `{run_id}`, `{effort_argv...}`, and `--cwd {cwd}` when `supports_cwd_flag`. Tests compare it with `build_argv` for every engine at every effort. They also read it, filled in at every effort, against the runner's own `run` definition. |
@@ -2154,8 +2308,11 @@ vibey driver timer --platform systemd --out ~/.config/systemd/user
 | `driver hook` | `--config PATH` | The command Claude Code's `StopFailure` hook runs; reads the hook's JSON on stdin. On `error` `rate_limit` or `billing_error` it gates a brief into `<cwd>/.vibey/driver/`, appends `EngineFailedOver` and starts the sovereign engine detached. Any other error is ignored. A second hook for an active failover does nothing. Prints the outcome as JSON; exit 3 when the gate parked it (Claude Code ignores this hook's exit code). |
 | `driver probe` | `--cwd PATH`, `--config PATH` | Run by the timer. When a failover is active and its probe is due, runs `probe_argv` and appends `EngineProbed` (`ok` or not). Only after a recorded `ok` probe: winds the sovereign engine down, gates the return brief (it lists the commits made meanwhile), appends `EngineHandedBack` and resumes the session with `resume_argv` (`claude -p --resume <session-id>`). |
 | `driver status` | `--cwd PATH`, `--config PATH` | The state, read from `<cwd>/.vibey/driver/ledger.jsonl`, as JSON. |
-| `driver timer` | `--out DIR`, `--platform launchd\|systemd`, `--cwd PATH` | Writes a launchd agent (macOS default) or a systemd user service and timer that run `vibey driver probe --cwd <worktree>` every `probe_interval_seconds`, and prints the `launchctl` / `systemctl --user` command that loads it. vibey never loads it for you. |
+| `driver timer` | `--out DIR` (required), `--platform launchd\|systemd` (default `launchd`), `--cwd PATH` (default `.`), `--config PATH` | Writes a launchd agent (macOS default) or a systemd user service and timer that run `vibey driver probe --cwd <worktree>` every `probe_interval_seconds`, and prints the `launchctl` / `systemctl --user` command that loads it. vibey never loads it for you. |
 | `driver hook-config` | | Prints the `settings.json` block that runs `vibey driver hook` on `StopFailure`, with no matcher. |
+
+`--config` names the `vibey.toml` that holds [`[failover]`](configuration.md#failover); it
+defaults to the one in `--cwd` (the current folder for `driver hook`). `--cwd` defaults to `.`.
 
 Both directions pass the no-loss gate: STRICT up to three times (the brief's
 transcript SHA-256 must equal the transcript's now), then FULL_TRANSCRIPT (the
@@ -2391,7 +2548,7 @@ This is a `vibey-gh` command, part of the same distribution:
 | `vibey-gh slots calibrate --corpus FILE` | Sweep N = 1, 2, 3, ... on this device beside an idle production runner. Stops at a broken bound or a plateau, checkpoints every step, and records the evidence keyed to the device's fingerprint. |
 | `vibey-gh slots allowed` | Print the number a queue may run at once here, with the reason on stderr. Missing or stale evidence prints `1` and requests a calibration. |
 
-Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/cli.md).
+Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/gh/docs/cli.md).
 
 ## `vibey-gh pin-actions`
 
@@ -2406,7 +2563,7 @@ what runs in the pipeline. This is a `vibey-gh` command, part of the same distri
 | `vibey-gh pin-actions --check-stale [PATH ...]` | The same look, no write: exit 1 when a pin is stale or cannot be checked. Needs the network, so it is not the offline check above. |
 | `vibey-gh pin-actions --check-stale --tracking-issue` | What `pin-freshness.yml` runs weekly: keeps ONE open issue (`pin-freshness`) while a pin is stale or unchecked, closes it when none is, and exits 0 once it has said so. |
 
-Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/cli.md).
+Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/gh/docs/cli.md).
 
 ## `vibey-gh sabbath`
 
@@ -2461,9 +2618,9 @@ vibey doctor --conformance --record
 | `--project ID` | latest | Project to record health for, with `--record`. |
 | `--cluster` | off | Run the in-cluster preflight instead of the engine checks — see [Kubernetes guide](../guides/kubernetes.md). |
 | `--engines LIST` | unset | With `--cluster`: the worker's own `--engines` allow-list (chart value `worker.engines`). `engine-auth` requires exactly these. Parsed as the worker parses it; empty means unset. |
-| `--provider NAME` | `scripted` | With `--cluster`: the worker's own `--provider` (`scripted`, `claudeloop`, `gptossloop`, or the old name `qwenloop`; chart value `worker.provider`). `claudeloop` adds claudeloop to what `engine-auth` requires. |
+| `--provider NAME` | read as `scripted` (known defect: the worker's own default is `gptossloop`) | With `--cluster`: the worker's own `--provider` (`scripted`, `claudeloop`, `gptossloop`, or the old name `qwenloop`; chart value `worker.provider`). `claudeloop` adds claudeloop to what `engine-auth` requires; `scripted` and `gptossloop` add nothing. With the flag omitted, the preflight still models the worker's provider as `scripted` (`src/vibey/infrastructure/cluster_preflight.py`), while `vibey worker` with no `--provider` runs `gptossloop` (ADR-0064). The `engine-auth` result is the same either way today, because neither adds a requirement, but no cluster check asks whether the Ollama the default provider needs answers. |
 | `--install-postgres` | off | Install and start local PostgreSQL when it is missing or stopped. This is explicit; the default doctor never changes the host. It cannot be combined with `--cluster`. |
-| `--sovereign-fit` | off | Run the GPT-OSS capacity probe (`scripts/sovereign_probe.py`) against `$VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`) and `$VIBEY_OLLAMA_MODEL` (default `gpt-oss:20b`), and persist the measured fit; see [Local models](../guides/local-models-ollama.md#measuring-a-capacity-fit). Prints `sovereign fit PASS — recorded <path>`, or `sovereign fit FAIL — no measured capacity fit recorded`, which makes doctor exit 1. |
+| `--sovereign-fit` | off | Run the GPT-OSS capacity probe (`scripts/sovereign_probe.py`) against `$VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`) and the sovereign model (`$VIBEY_OLLAMA_MODEL`, else `$VIBEY_SOVEREIGN_MODEL`, else the heretic tag `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`; doctor always passes it, so the script's own `--model` default is never used), and persist the measured fit; see [Local models](../guides/local-models-ollama.md#measuring-a-capacity-fit). Prints `sovereign fit PASS — recorded <path>`, or `sovereign fit FAIL — no measured capacity fit recorded`, which makes doctor exit 1. **Needs a source checkout** (known defect): doctor looks for the script three folders above the installed `vibey` package, and the `vibey-engine` wheel ships no `scripts/` folder, so from a `uv tool` or `pip` install the probe cannot be found and the fit fails. Not run for this page. |
 | `--fit-output PATH` | `~/.local/state/vibey/sovereign-fit.json` | Where `--sovereign-fit` writes the fit record. Its parent directory is created. |
 | `--json` | off | Print one JSON document on stdout instead of lines — see [`--json`](#vibey-doctor-json). It changes only the output: the same checks run, `--record`, `--install-postgres` and `--sovereign-fit` do what they do without it, and the exit code is the text form's. |
 
@@ -2565,7 +2722,8 @@ read is a `FAIL`.
 
 When a local engine is switched on, the `ollama` line asks the server (`/api/ps`, three
 seconds, host and port only in what it prints) what it is holding. `WARN` when the configured
-model (`VIBEY_OLLAMA_MODEL`, default `gpt-oss:20b`) is loaded at a context above
+model (`VIBEY_OLLAMA_MODEL`, else `VIBEY_SOVEREIGN_MODEL`, else the heretic tag
+`hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`) is loaded at a context above
 `VIBEY_OLLAMA_CONTEXT` (default `8192`): Ollama reloads a model whose context differs from a
 request's, so the first request pays for the reload and can time out, and a warm-up at a larger
 window is how that happens. The line names the fix, `ollama stop MODEL`. `OK` when the model is
@@ -2773,28 +2931,44 @@ for the worker. When qwenloop is switched on the worker prints
 `note: qwenloop is switched on, and since ADR-0064 it runs a Qwen model ...` at
 start. With `VIBEY_OLLAMA_URL` set, the worker hands gptossloop
 `GPTOSSLOOP_BASE_URL=<url>/v1` and `GPTOSSLOOP_MODEL` (`--ollama-model`, else
-`VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`), and qwenloop `QWENLOOP_BASE_URL`
-only — never a model; a variable the operator set already is left alone.
+`VIBEY_OLLAMA_MODEL`, else `VIBEY_SOVEREIGN_MODEL`, else the heretic tag
+`hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`), and qwenloop `QWENLOOP_BASE_URL`
+only — never a model; a variable the operator set already is left alone. With
+`VIBEY_OLLAMA_URL` unset, vibey hands neither runner anything, and each runner's own
+configuration chooses its endpoint and model.
+
+`--local-max-turns` (or `VIBEY_LOCAL_MAX_TURNS`) replaces the `--max-turns` each local runner
+session is started with at every effort but ULTRA, which has none.
 
 ### qwenloop shared-turn worker
 
-`qwenloop server turn-worker` hosts one inference server behind the durable
-RabbitMQ turn queue so multiple lane processes can share it. Configure
-`turn_dispatch_mode = "rabbitmq"`, `turn_queue_url`, and optionally
-`turn_queue_name` in the qwenloop configuration before starting it. The
-command refuses direct mode, starts or verifies the configured inference
-server, and then consumes turns until stopped. Keep the broker URL in
-operator-owned secret configuration; use a TLS AMQP URL and least-privilege
-vhost/queue credentials when the broker is not local. If the worker stops,
-restart the same command after RabbitMQ is available; durable requests remain
-on the queue for another worker.
+How the local runner (gptossloop and qwenloop are one package) sends its model turns is set in the
+**runner's own** `config.toml`, at its top level: the file `GPTOSSLOOP_CONFIG` or
+`QWENLOOP_CONFIG` names, else `config.toml` in the runner's user configuration folder. These keys
+are not `vibey.toml` keys; a `[qwenloop]` table in `vibey.toml` that carries them is parsed and
+ignored.
 
-`qwenloop server benchmark` runs a measured direct-versus-hybrid-versus-RabbitMQ
-comparison against the configured local server and stores the per-mode rates and
-winner in the user cache. Set
-`turn_dispatch_mode = "auto"` to use that persisted winner on subsequent runs;
-missing or invalid benchmark data safely falls back to direct dispatch. Use
-`--samples` and `--concurrency` to control the experiment size.
+| Key | Default | What it does |
+|---|---|---|
+| `turn_dispatch_mode` | `auto` | `auto`, `direct`, `hybrid` or `rabbitmq`; anything else is refused. `auto` uses the winner `qwenloop server benchmark` stored, else `direct`. `direct` sends each turn straight to the server. `hybrid` multiplexes turns, up to `hybrid_concurrency` at once. `rabbitmq` queues them on a durable RabbitMQ queue that `server turn-worker` serves. |
+| `hybrid_concurrency` | `2` | With `hybrid`: how many turns share the server at once. |
+| `turn_queue_url` | empty | The AMQP URL of the broker; required with `rabbitmq`. |
+| `turn_queue_name` | `vibey.llm.turns` | The queue turns are sent on. |
+
+`qwenloop server turn-worker` (or `gptossloop server turn-worker`) hosts one inference server
+behind the durable RabbitMQ turn queue so several lane processes can share it. Set
+`turn_dispatch_mode = "rabbitmq"` and `turn_queue_url` first. The command refuses direct mode,
+starts or verifies the configured inference server, and then consumes turns until stopped. Keep
+the broker URL in operator-owned secret configuration; use a TLS AMQP URL and least-privilege
+vhost and queue credentials when the broker is not local. If the worker stops, restart the same
+command after RabbitMQ is available; durable requests remain on the queue for another worker.
+
+`qwenloop server benchmark` measures direct against hybrid dispatch on the configured local server
+(and RabbitMQ too, when `turn_queue_url` is set), prints the per-mode rates and the winner as JSON,
+and stores them in `dispatch-benchmark.json` in the runner's user cache folder. With
+`turn_dispatch_mode = "auto"`, later runs use that winner; missing or invalid benchmark data falls
+back to direct dispatch. `--samples` (default `3`) and `--concurrency` (default `2`) set the size
+of the experiment; `--backend`, `--base-url` and `--model` choose the server as for `run`.
 
 The queue reaper (ADR-0056) runs in the same idle iterations: after the lease reap, at
 most once per `[queue.reap] interval_seconds` across all of the worker's loops, the
@@ -2811,20 +2985,94 @@ soon as the event loop starts. Ctrl-C aborts immediately with exit 130. The
 worker writes diagnostic lines to stderr (`sigterm handler registered`,
 `drive[<i>] iter=...`); they are temporary instrumentation, not errors.
 
+## Other commands in the `vibey-engine` package
+
+`vibey-engine` installs ten commands, not only `vibey` (`[project.scripts]` in
+`pyproject.toml`; ADR-0037). `krypton` is not one of them: it comes with the separate
+`krypton-app` package. This page documents `vibey` and three `vibey-gh` commands
+([`slots`](#vibey-gh-slots), [`pin-actions`](#vibey-gh-pin-actions),
+[`sabbath`](#vibey-gh-sabbath)); for the others, `<command> --help` is the reference, with the
+runners' own documentation under `src/vibey_runners/`. The subcommands below are what each
+`--help` listed on 2026-11-24.
+
+| Command | What it is | Subcommands |
+|---|---|---|
+| `claudeloop` | The Claude Code session runner (paid; also runs as `claudeloop-local` on a local backend profile). Its `-v` is its verbose flag, unlike `vibey`'s. | `run`, `resume`, `stop`, `prompt`, `permission-mode`, `cwd`, `slash`, `tool`, `attach`, `unattach`, `folder`, `skill`, `plugin`, `connector`, `github`, `memory`, `artifact`, `chat`, `response`, `research`, `web-search`, `voice`, `speak`, `logs`, `status`, `snapshot`, `runs`, `savepoints`, `unwind`, `reset`, `watch`, `sessions`, `doctor`, `api` |
+| `codexloop` | The Codex session runner (paid). | `run`, `resume`, `threads`, `status`, `logs`, `runs`, `prompt`, `stop`, `wind-down`, `capacity`, `doctor`, `watch`, `savepoints`, `unwind`, `reset`, `snapshot`, `model`, `effort`, `approval`, `sandbox`, `cwd`, `api` |
+| `gptossloop` | The local runner on GPT-OSS 20B, the sovereign default engine (ADR-0064). | `run`, `doctor`, `whoami`, `usage`, `stop`, `wind-down`, `prompt`, `resume`, `status`, `logs`, `watch`, `snapshot`, `reset`, `runs`, `sessions`, `threads`, `agents`, `savepoints`, `unwind`, `capacity`, `models`, `effort`, `preset`, `permission-mode`, `approval`, `sandbox`, `cwd`, `slash`, `hooks`, `config`, `attach`, `unattach`, `folder`, `skill`, `plugin`, `connector`, `memory`, `artifact`, `github`, `research`, `web-search`, `chat`, `response`, `voice`, `speak`, `cloud`, `api`, `model`, `server`, `tool` |
+| `qwenloop` | The same runner on a Qwen model (`qwen3:14b` unless its configuration names another); off in vibey unless switched on. | the same as `gptossloop`; `server` holds `status`, `start`, `turn-worker`, `benchmark` and `stop` ([shared-turn worker](#qwenloop-shared-turn-worker)) |
+| `vibey-gh` | The repository tooling: hooks, provenance, the merge train, promotion, releases, CI helpers and the governance corpus. 62 subcommands. | `check`, `install`, `setup`, `version`, `trailer`, `trailer-key`, `conventional-message`, `provenance-message`, `conventional-check`, `provenance-check`, `sabbath`, `merge-train`, `pr-automation`, `issue-automation`, `issue-triage`, `github-release`, `promote`, `flatten`, `realign`, `report-superseded`, `local-review`, `review-canary`, `review-outcomes`, `review-timings`, `doctor`, `tidy`, `local-authority`, `failover`, `forge-snapshot`, `forge-state`, `corpus-index`, `marketplace`, `push-scope`, `sovereign`, `heartbeat`, `runner`, `fit`, `slots`, `estimate`, `forecast`, `paper`, `paper-figures`, `book`, `local-triage`, `conversation`, `reconcile-branches`, `rulesets`, `ci-areas`, `ci-matrix`, `ci-nightly`, `pin-actions`, `skip-marker-check`, `advisory-check`, `changelog`, `branch-health`, `tracking-issue`, `approve-check`, `announce`, `api`, `mcp`, `sdk`, `webhook` ([vibey-gh CLI reference](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/gh/docs/cli.md)) |
+| `vibey-skills` | The skills marketplace that ships in the wheel, and skills retrieval. | `list`, `install`, `path`, `marketplace`, `index`, `search`, `packet`, `evaluate` |
+| `vibey-bootstrap` | Scaffolds a project from a template. | `version`, `list`, `scaffold` |
+| `vibe-skills` | Deprecated name of `vibey-skills`: says so on stderr, then runs it. | as `vibey-skills` |
+| `azbootstrap` | Deprecated name of `vibey-bootstrap`: says so on stderr, then runs it. | as `vibey-bootstrap` |
+
 ## Environment variables
 
-Variables read by code under `src/vibey`:
+Every `VIBEY_*` variable the code under `src/vibey` and `src/vibey_runners` reads (found by
+searching the source for every `VIBEY_` name on 2026-11-24, test files left out), and the few
+other names vibey reads or passes on, grouped by what they are for. An empty value counts as unset
+unless a row says otherwise. The [configuration reference](configuration.md#environment-variables)
+covers the same variables from the `vibey.toml` side.
 
-| Variable | Read by | Effect |
+### Database and migrations
+
+| Variable | Read by | Default and effect |
 |---|---|---|
 | `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor`; `migrate` | The application role's PostgreSQL 14+ DSN ([database roles](configuration.md#database-roles)). There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). `vibey install --postgres` installs the server; `vibey install --database` makes the database and prints the line that sets this variable, which no command can set for the parent shell. |
 | `VIBEY_PG_MIGRATE_URL` | `migrate` only | The owner's DSN. Migrations run on it and the application role's grants are reconciled from it. Give it to that one command (`VIBEY_PG_MIGRATE_URL=… vibey migrate`); never export it. |
+| `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` | every command that opens the queue (`PostgresMigrator`) | `300`. How long a start waits for another process's migration lock before failing with `MigrationLockTimeout`, which names the process holding it. Seconds, fractions allowed; `0` waits for ever. A value that is not a number from `0` to `2147483.647` fails the start with `InvalidMigrationLockTimeout`. |
 | `VIBEY_STATE_PG_URL`, `VIBEY_STATE_KEY` and the other `VIBEY_STATE_*` | `state` only | The database the state sync reads and writes (default `VIBEY_PG_URL`), the state key, and where the sealed state lives; every one in [State sync](configuration.md#state-sync). |
 | `VIBEY_EVIDENCE_DIR` | `work --provider gptossloop`, `worker --provider gptossloop` | Directory of reading material for the gptossloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
 | `VIBEY_FEATURE_GPTOSSLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables gptossloop; any other set value, `0` included, disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] gptossloop` in `./vibey.toml` and `worker` to the project's stored config; with neither, gptossloop is on (ADR-0064). |
 | `VIBEY_OLLAMA_URL` | `work` and `worker` with `--provider gptossloop`; `doctor --sovereign-fit`; `loops`; `install --model`; the worker's local engines | The Ollama server, default `http://127.0.0.1:11434`. Only an `http(s)` URL with a host is accepted. |
 | `VIBEY_OLLAMA_MODEL` | as `VIBEY_OLLAMA_URL` | The local model tag (or variant key `heretic` / `stock`); `--ollama-model` beats it, and it beats `VIBEY_SOVEREIGN_MODEL` (ADR-0099). |
 | `VIBEY_SOVEREIGN_MODEL` | as `VIBEY_OLLAMA_URL` | Sovereign model variant key: `heretic` (default, `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`) or `stock` (`gpt-oss:20b`). Beaten by `--ollama-model` and `VIBEY_OLLAMA_MODEL`; an unknown value raises an error naming the valid keys (ADR-0099). |
+
+### State sync (`vibey state`)
+
+Read by [`vibey state`](#vibey-state) alone (`StateSyncSettingsLoader`); no `vibey.toml` key sets
+them. Every one is described in [State sync](configuration.md#state-sync).
+
+| Variable | Default and effect |
+|---|---|
+| `VIBEY_STATE_REPOSITORY` | Empty: the working directory's GitHub repository. The repository whose branch holds the sealed state, as `OWNER/NAME`. |
+| `VIBEY_STATE_BRANCH` | `vibey-state`. The branch the sealed state lives on. |
+| `VIBEY_STATE_PATH` | `state.vibey`. The one file on that branch. |
+| `VIBEY_STATE_PG_URL` | `VIBEY_PG_URL`. The database to sync; neither set is exit 2. |
+| `VIBEY_STATE_KEY` | Empty: the macOS keychain, then `VIBEY_STATE_KEY_FILE`. The key itself, 32 bytes as base64url. |
+| `VIBEY_STATE_KEY_FILE` | `$XDG_CONFIG_HOME/vibey/state.key`, else `~/.config/vibey/state.key`. Where the key is kept when there is no keychain; refused while its group or others can read it. |
+| `VIBEY_STATE_CONFLICTS` | Empty: the declared rules. Per-table conflict rules, as `table=rule,table=rule` (`newest`, `mine`, `theirs`, `refuse`). |
+| `VIBEY_STATE_ATTEMPTS` | `5`. How many times one sync starts again when the database or the branch moved under it. |
+
+### Running a command on the workflows (`vibey -w`)
+
+Read by [`vibey -w`](#running-a-command-on-the-workflows) and by the hub's
+`/api/v1/workflows/runs` routes (`RemoteWorkflowsSettingsLoader`).
+
+| Variable | Default and effect |
+|---|---|
+| `VIBEY_WORKFLOWS_REPOSITORY` | Empty: the working directory's git remote. The repository, as `OWNER/NAME`. |
+| `VIBEY_WORKFLOWS_WORKFLOW` | `vibey-remote.yml`. The workflow file that runs the command. |
+| `VIBEY_WORKFLOWS_REF` | Empty: the repository's default branch. The branch to run it on. |
+| `VIBEY_WORKFLOWS_POLL_SECONDS` | `10`. Seconds between looks at the run. |
+| `VIBEY_WORKFLOWS_TIMEOUT_SECONDS` | `3600`. Seconds before `vibey -w` stops waiting (exit 124). A wait that is not a positive number is exit 2; on the hub it leaves the routes answering 503. |
+
+`VIBEY_WORKFLOWS_PG_URL` is not read by vibey's code: it is the name of a repository secret the
+`vibey-remote.yml` workflow reads, on a private repository only.
+
+### Local engines and the local model
+
+| Variable | Read by | Default and effect |
+|---|---|---|
+| `VIBEY_FEATURE_GPTOSSLOOP` | `doctor`, `worker`, `loops`, and every command that loads `./vibey.toml` whole | On when unset. `1`, `true`, `yes`, or `on` (case-insensitive) enables gptossloop; any other set value, `0` included, disables it for `doctor`, `worker` and `loops`. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] gptossloop` in `./vibey.toml` and `worker` to the project's stored config; with neither, gptossloop is on (ADR-0064). Where `./vibey.toml` is loaded whole (the start of every command that opens the queue), a value other than `1`, `0`, `true`, `false`, `yes`, `no`, `on` or `off` is refused: the file and the environment's surface settings are then skipped, each with a warning, so the operational surfaces stay in memory (the bus and the queue reaper still read their own settings, `bootstrap.build_app`). |
+| `VIBEY_FEATURE_QWENLOOP` | as `VIBEY_FEATURE_GPTOSSLOOP` | Off when unset. The same values switch on qwenloop, the runner on a Qwen model. When unset, `doctor` and `loops` fall back to `[features] qwenloop` in `./vibey.toml` and `worker` to the project's stored config; with neither, qwenloop is off. When on, `doctor` and `worker` print `note: qwenloop is switched on, and since ADR-0064 it runs a Qwen model ...`. |
+| `VIBEY_FEATURE_CLAUDELOOP_LOCAL` | as `VIBEY_FEATURE_GPTOSSLOOP` | Off when unset. The same values switch on `claudeloop-local`, the claudeloop binary on a local backend profile; the fallback is `[features] claudeloop_local`. |
+| `VIBEY_CLAUDELOOP_LOCAL_PROFILE` | `worker`, `doctor`, `loops` (`LocalEngineSettings`) | Unset: `[engines.claudeloop_local] profile`, whose default is `local`. The backend profile claudeloop-local runs with ([`[engines.claudeloop_local]`](configuration.md#enginesclaudeloop_local)). |
+| `VIBEY_LOCAL_MAX_TURNS` | `worker` (`LocalEngineSettings`); `worker --local-max-turns` sets it for that worker | Unset: each local runner keeps its per-effort turn limit (8, 16, 40, 64 or 96). A whole number of at least 1, or `unlimited` (handed over as 100000), replaces the `--max-turns` every gptossloop and qwenloop session is started with, at every effort but ULTRA. Anything else is refused. |
+| `VIBEY_OLLAMA_URL` | `work` and `worker` with `--provider gptossloop`; `doctor` (`--sovereign-fit` and the `ollama` line); `loops`; `models`; the worker's local engines | `http://127.0.0.1:11434`. The Ollama server. Only an `http(s)` URL with a host is accepted. Set, the worker hands it to gptossloop and qwenloop ([`vibey worker`](#vibey-worker)); unset, it hands them nothing. |
+| `VIBEY_OLLAMA_MODEL` | as `VIBEY_OLLAMA_URL` | Unset: `VIBEY_SOVEREIGN_MODEL`, else the heretic tag. The local model: an Ollama tag, or a variant key (`heretic`, `stock`). `--ollama-model` beats it, and it beats `VIBEY_SOVEREIGN_MODEL` (ADR-0099). |
+| `VIBEY_SOVEREIGN_MODEL` | as `VIBEY_OLLAMA_URL` | `heretic`, which is `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`. The sovereign model variant: `heretic` or `stock` (`gpt-oss:20b`). Beaten by `--ollama-model` and `VIBEY_OLLAMA_MODEL`. Any other value is used as an Ollama tag, as written (`SovereignModels.resolve`; ADR-0099). |
 | `VIBEY_OLLAMA_TIMEOUT` | the sovereign DESIGN and DECOMPOSE providers | Seconds per request, default `900`. |
 | `VIBEY_OLLAMA_CONTEXT` | as `VIBEY_OLLAMA_TIMEOUT` | Context ceiling in tokens (`num_ctx`), default `8192`, at least `4096`. |
 | `VIBEY_OLLAMA_OUTPUT` | as `VIBEY_OLLAMA_TIMEOUT` | Output ceiling in tokens (`num_predict`), default `2048`. |
@@ -2832,8 +3080,33 @@ Variables read by code under `src/vibey`:
 | `VIBEY_OLLAMA_TEMPERATURE` | as `VIBEY_OLLAMA_TIMEOUT` | Sampling temperature, `0` to `2`, default `0`. At `0` a job's retries are the same request and fail the same way, so a plan that is rejected once is rejected every attempt (seen: seven identical `build.decompose` attempts). Raise it (`0.6` is a start) when attempts keep failing for the same reason; the answer to an unchanged question then varies, so the DESIGN and DECOMPOSE results are no longer reproducible. A bad value exits 2. |
 | `VIBEY_OLLAMA_RETRY_CONTEXT` | as `VIBEY_OLLAMA_TIMEOUT` | The largest context window the one retry of a cut-short reply may ask for, default `32768`, at least `4096`. A prompt that leaves too little of `VIBEY_OLLAMA_CONTEXT` for the reasoning and the answer fills the window, and asking again inside the same window only fails again; the retry instead opens as much as it needs, up to this. A configured `VIBEY_OLLAMA_CONTEXT` above it is never lowered. Set it equal to `VIBEY_OLLAMA_CONTEXT` to keep the retry inside that ceiling. Ollama reloads a model whose context changes, so a retry that grows the window pays a reload: raise `VIBEY_OLLAMA_CONTEXT` itself when that is the usual case. |
 | `VIBEY_OLLAMA_FIT` | as `VIBEY_OLLAMA_TIMEOUT` | Path to a fit record written by `vibey doctor --sovereign-fit`. When it matches, its measured context and output replace the two ceilings above; see [Local models](../guides/local-models-ollama.md#measuring-a-capacity-fit). Unset, unreadable or mismatched means the configured ceilings. |
-| `VIBEY_REVISION` | as `VIBEY_OLLAMA_FIT` | When set, a fit record is used only if its `revision` equals this value. |
-| `VIBEY_SEARXNG_URL` | `search`, `worker`, `doctor`, the sovereign DESIGN research stage | Base URL of the local SearXNG, with its JSON format enabled; default the one [`vibey searxng`](#vibey-searxng) installed (its record's loopback port, when neither this nor `VIBEY_SEARXNG_INSTANCE` is set), else `http://127.0.0.1:28180`. No user name, password, query or fragment, and a port from 1 to 65535 if it names one (exit 2 otherwise). Always asked first ([local first](#local-first-search)). Never passed to an engine session, which searches through the hub. Queries go to that instance, so keep it your own. |
+| `VIBEY_REVISION` | as `VIBEY_OLLAMA_FIT` | Unset: any matching fit record is used. When set, a fit record is used only if its `revision` equals this value. |
+| `VIBEY_OLLAMA_RETRY_THINK` | as `VIBEY_OLLAMA_TIMEOUT` | `low`. The reasoning level the one retry of a cut-short reply asks for; the same values as `VIBEY_OLLAMA_THINK`. |
+| `VIBEY_LLM_WIRE_LOG` | the sovereign DESIGN and DECOMPOSE client; `worker` (it notes each engine session in the log); `llm tail` (to find the file); `vibey -ddd` sets it when unset | Unset: no wire log, and the model is asked as before. A path: every request to the local model and its reply as it streams, one JSON object per line, readable by its owner alone; `-ddd` sets `~/.local/state/vibey/llm-wire.jsonl`. Never rotated. See [`vibey llm`](#vibey-llm). |
+| `VIBEY_ENGINE_MAX_RUN_MINUTES` | `worker`, for every BUILD engine session, and its loop-snapshot sweep | Unset: the project's [`[engines] max_run_minutes`](configuration.md#engines), else `240`. The wall-clock limit on one BUILD engine session, in whole minutes. A value that is not a positive whole number is ignored, never read as "no limit". |
+| `VIBEY_CONFORMANCE_POLL_SECONDS` | `doctor --conformance` | `30`. How long conformance waits for an engine's run directory to appear before failing `run_dir_shape`. A value that is not a finite number above zero is exit 2, before any engine starts. |
+| `VIBEY_ENGINES_MODE` | `worker` (engine dispatch), and every whole-`vibey.toml` load | Unset: the project's `[engines] mode`, default `auto`. Overrides it ([hybrid engine dispatch](configuration.md#engine-dispatch), ADR-0079). |
+| `VIBEY_ENGINES_OVERFLOW_AFTER_SECONDS` | as `VIBEY_ENGINES_MODE` | Unset: `[engines] overflow_after_seconds`, default `600`. |
+| `VIBEY_ENGINES_PAID_DAILY_CAP` | as `VIBEY_ENGINES_MODE` | Unset: `[engines] paid_daily_cap`, default `10`. No value means "uncapped". A value that is not valid for its key fails building that project's worker. |
+| `GPTOSSLOOP_MODEL`, `QWENLOOP_MODEL` | `loops` (the `default_model` it reports); the runners themselves | Unset. The model each local runner sends to its endpoint. The worker sets `GPTOSSLOOP_MODEL` for gptossloop when `VIBEY_OLLAMA_URL` is set and you have not set it yourself; it never sets `QWENLOOP_MODEL`, and qwenloop then runs `qwen3:14b` unless its own configuration names another. |
+| `GPTOSSLOOP_BASE_URL`, `QWENLOOP_BASE_URL` | the runners | Unset. Each runner's OpenAI-compatible endpoint. The worker sets them to `<VIBEY_OLLAMA_URL>/v1` when `VIBEY_OLLAMA_URL` is set and you have not set them yourself. |
+| `GPTOSSLOOP_CONFIG`, `QWENLOOP_CONFIG` | the runners | Unset: `config.toml` in the runner's user configuration folder. The runner's own configuration file ([shared-turn worker](#qwenloop-shared-turn-worker)). |
+
+### DESIGN research
+
+| Variable | Read by | Default and effect |
+|---|---|---|
+| `VIBEY_EVIDENCE_DIR` | `work --provider gptossloop`, `worker --provider gptossloop` (the default) | Unset. A directory of reading material for the gptossloop DESIGN provider's research stage ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). With it unset and no search backend answering, research has no evidence, and what happens is `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE` (below). |
+| `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE` | every command that opens the queue (`build_app`, through the environment overlay) | Unset: [`[design.research] on_unavailable`](configuration.md#designresearch), default `gate`. `gate` parks a `research_evidence` gate for a person; `record_gap` records the topic as not researched and goes on. Any other value fails the start. `worker --auto-record-research-gaps` and `--autonomous` set it to `record_gap` for that worker. |
+
+### Web search
+
+Read from your own environment only: no `vibey.toml` key sets any of them. Every rule is in
+[Local first; Brave only as a backup](#local-first-search).
+
+| Variable | Read by | Default and effect |
+|---|---|---|
+| `VIBEY_SEARXNG_URL` | `search`, `worker`, `doctor`, the sovereign DESIGN research stage | Base URL of the local SearXNG, with its JSON format enabled; default the one [`vibey searxng`](#vibey-searxng) installed (its record's loopback port, when neither this nor `VIBEY_SEARXNG_INSTANCE` is set), else `http://127.0.0.1:28180`. No user name, password, query or fragment, and a port from 1 to 65535 if it names one (exit 2 otherwise). Always asked first ([local first](#local-first-search)). Passed to engine sessions as `WEBSEARCH_SEARXNG_URL`. Queries go to that instance, so keep it your own. |
 | `VIBEY_BRAVE_API_KEY` | as `VIBEY_SEARXNG_URL` | A Brave Search key: the backup, asked only when the local SearXNG fails, and said once on stderr when it is. Used by vibey's own processes only; never passed to a session. |
 | `BRAVE_SEARCH_API_KEY` | as `VIBEY_SEARXNG_URL` | The same Brave Search key under the name Brave's own tools read; used only when neither `VIBEY_BRAVE_API_KEY` nor its `WEBSEARCH_BRAVE_API_KEY` form is set. Used by vibey's own processes only: never passed to a session or a gate, not even by a declared allow-list, and never printed (the worker says only `configured via BRAVE_SEARCH_API_KEY`). |
 | `VIBEY_SEARCH_PROVIDER` | as `VIBEY_SEARXNG_URL` | `searxng`, or unset. `brave` is refused (exit 2): Brave is a backup only; set its key instead. |
@@ -2841,20 +3114,125 @@ Variables read by code under `src/vibey`:
 | `VIBEY_SEARCH_RESULTS` | as `VIBEY_SEARXNG_URL` | How many results a search returns, `1` to `20`; default `5`. |
 | `VIBEY_SEARXNG_INSTANCE` | as `VIBEY_SEARXNG_URL` | Optional. The `instance_name` vibey's own SearXNG answers on `/config`; when set, a SearXNG that names itself anything else is not believed ([local first](#local-first-search)). Your own environment only: a project's `vibey.toml` cannot set it. Never passed to a session; never printed. |
 | `VIBEY_SEARCH_IDENTITY_TTL` | as `VIBEY_SEARXNG_URL` | Seconds a SearXNG that proved its identity is believed before `/config` is asked again; default `60`. A value that is not a finite number above zero exits 2. |
+| `WEBSEARCH_BRAVE_API_KEY` | as `VIBEY_SEARXNG_URL` | Unset. The Brave Search key under the name the runners' web tools use; read when `VIBEY_BRAVE_API_KEY` is not set, and before `BRAVE_SEARCH_API_KEY`. Used by vibey's own processes only: never passed to a session or a gate, not even by a declared allow-list. |
+
+The worker passes sessions the non-secret search settings under their own names:
+`WEBSEARCH_PROVIDER`, `WEBSEARCH_SEARXNG_URL`, `WEBSEARCH_TIMEOUT`, `WEBSEARCH_RESULTS`,
+`WEBSEARCH_IDENTITY_TTL`, `WEBSEARCH_SEARXNG_INSTANCE` when set, and `WEBSEARCH_COMMAND` (the
+running `vibey`). See [What engine sessions are told](#what-engine-sessions-are-told).
+
+### Run inputs
+
+| Variable | Read by | Default and effect |
+|---|---|---|
+| `VIBEY_INPUTS_ACCESS_KEY`, `VIBEY_INPUTS_SECRET_KEY` | `inputs add`, `inputs list`, `doctor`'s `run-inputs` line, and every BUILD run with inputs, when [`[inputs] store = "seaweedfs"`](configuration.md#inputs) | Unset. The SeaweedFS store's access key and secret key. These are the default names; `[inputs] access_key_env` and `secret_key_env` name others. Not set when needed: exit 78 from `inputs`, a `FAIL` from doctor. Never written to a file or printed. |
+
+### Sabbath and notices
+
+| Variable | Read by | Default and effect |
+|---|---|---|
+| `VIBEY_SABBATH_ENABLED` | every command that keeps the Sabbath: `new`, `work`, `worker`, `doctor`, `sabbath` | Unset: [`[sabbath] enabled`](configuration.md#sabbath). `1`, `true`, `yes` or `on` turns the Sabbath on, `0`, `false`, `no` or `off` turns it off, for this process; any other value leaves the table's setting. The environment alternative to `--ignore-sabbath`. |
+| `VIBEY_NOTIFICATION_ICON` | desktop gate notices (`infrastructure/notify/desktop.py`) and qwenloop's own desktop notices | Unset: no icon. A path to the icon a desktop notification shows. |
+
+### Queue and telemetry
+
+Read when a command opens the queue (`bootstrap.build_app`), and by `vibey worker` and
+`vibey queue reap`: `./vibey.toml` when there is one, with these variables beating its keys,
+else the environment alone (a cluster pod has no `vibey.toml`). A boolean takes `1`, `true`,
+`yes` or `on` and `0`, `false`, `no` or `off`; an integer must be a whole number. A malformed
+queue value fails the start, naming the variable.
+
+| Variable | Overrides | Default |
+|---|---|---|
+| `VIBEY_QUEUE_REAP_ENABLED` | [`[queue.reap]`](configuration.md#queuereap) `enabled` | `true` |
+| `VIBEY_QUEUE_REAP_INTERVAL_SECONDS` | `[queue.reap] interval_seconds` | `60` |
+| `VIBEY_QUEUE_REAP_LEASE_GRACE_SECONDS` | `[queue.reap] lease_grace_seconds` | `0` |
+| `VIBEY_QUEUE_REAP_STALE_READY_SECONDS` | `[queue.reap] stale_ready_seconds` | `900` |
+| `VIBEY_QUEUE_REAP_DEAD_LETTER_MIN_DEPTH` | `[queue.reap] dead_letter_min_depth` | `1` |
+| `VIBEY_QUEUE_REAP_DEAD_LETTER_PEEK_LIMIT` | `[queue.reap] dead_letter_peek_limit` | `100` |
+| `VIBEY_QUEUE_REAP_OWNED_QUEUE_PATTERN` | `[queue.reap] owned_queue_pattern` | `^vibey\.` |
+| `VIBEY_QUEUE_REAP_DEAD_LETTER_QUEUE_PATTERN` | `[queue.reap] dead_letter_queue_pattern` | `(\.dlq\|\.dead)$` |
+| `VIBEY_QUEUE_REAP_POLICY_NAME` | `[queue.reap] policy_name` | `vibey-reap` |
+| `VIBEY_QUEUE_REAP_POLICY_PRIORITY` | `[queue.reap] policy_priority` | `0` |
+| `VIBEY_QUEUE_REAP_CONSUMER_TIMEOUT_SECONDS` | `[queue.reap] consumer_timeout_seconds` | `21600` |
+| `VIBEY_QUEUE_REAP_DELIVERY_LIMIT` | `[queue.reap] delivery_limit` | `20` |
+| `VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES` | [`[queue.defect]`](configuration.md#queuedefect) `identical_failures` | `3` |
+| `VIBEY_TELEMETRY_MAX_SPANS` | [`[telemetry]`](configuration.md#telemetry) `max_spans` | `10000` |
+| `VIBEY_TELEMETRY_MAX_SAMPLES` | `[telemetry] max_samples` | `1000` |
+
+### Operational surfaces
+
+Each surface's settings can come from the environment, read the same way as the queue settings
+above (`bootstrap.build_app`, through `StartupConfigResolver`): a set variable beats the key in
+`./vibey.toml`. An integer that is not a whole number, like any value that cannot be used, is said
+once as a warning, and the surfaces then stay in memory. Each table is in the
+[configuration reference](configuration.md#operational-surfaces-sovereign-defaults-declared-only-paid-relays).
+
+| Table | Variables (key) | Defaults |
+|---|---|---|
+| `[tracker]` (Plane) | `VIBEY_TRACKER_URL` (`url`), `VIBEY_TRACKER_TOKEN` (`token`), `VIBEY_TRACKER_WORKSPACE_SLUG` (`workspace_slug`), `VIBEY_TRACKER_PROJECT_ID` (`project_id`) | all unset |
+| `[docs]` (BookStack) | `VIBEY_DOCS_URL` (`url`), `VIBEY_DOCS_TOKEN_ID` (`token_id`), `VIBEY_DOCS_TOKEN_SECRET` (`token_secret`), `VIBEY_DOCS_BOOK_ID` (`book_id`, an integer) | all unset |
+| `[secrets]` (OpenBao) | `VIBEY_SECRETS_URL` (`url`), `VIBEY_SECRETS_TOKEN` (`token`) | all unset |
+| `[files]` (Nextcloud) | `VIBEY_FILES_URL` (`url`), `VIBEY_FILES_USER` (`user`), `VIBEY_FILES_PASSWORD` (`password`) | all unset |
+| `[email]` | `VIBEY_EMAIL_SMTP_HOST` (`smtp_host`), `VIBEY_EMAIL_SMTP_PORT` (`smtp_port`, an integer), `VIBEY_EMAIL_USERNAME` (`username`), `VIBEY_EMAIL_PASSWORD` (`password`), `VIBEY_EMAIL_FROM` (`from_email`) | all unset |
+| `[sms]` (Kannel) | `VIBEY_SMS_URL` (`url`), `VIBEY_SMS_USERNAME` (`username`), `VIBEY_SMS_PASSWORD` (`password`), `VIBEY_SMS_SENDER` (`sender`) | all unset |
+| `[messaging]` (Matrix) | `VIBEY_MESSAGING_URL` (`url`), `VIBEY_MESSAGING_TOKEN` (`token`), `VIBEY_MESSAGING_ROOM_ID` (`room_id`) | all unset |
+| `[config_store]` (Infisical) | `VIBEY_CONFIG_STORE_URL` (`url`), `VIBEY_CONFIG_STORE_TOKEN` (`token`), `VIBEY_CONFIG_STORE_PROJECT_ID` (`project_id`), `VIBEY_CONFIG_STORE_ENVIRONMENT` (`environment`) | `environment` is `dev`; the rest unset |
+| `[cache]` (Redis) | `VIBEY_CACHE_URL` (`url`) | unset |
+| `[bus]` (RabbitMQ) | `VIBEY_BUS_URL` (`url`), `VIBEY_BUS_USERNAME` (`username`), `VIBEY_BUS_PASSWORD` (`password`), `VIBEY_BUS_VHOST` (`vhost`) | `vhost` is `/`; the rest unset. `[bus] mode` and `hybrid_concurrency` have no variable. |
+| `[blob]` (Garage) | `VIBEY_BLOB_URL` (`url`), `VIBEY_BLOB_ACCESS_KEY` (`access_key`), `VIBEY_BLOB_SECRET_KEY` (`secret_key`), `VIBEY_BLOB_REGION` (`region`) | `region` is `us-east-1`; the rest unset |
+| `[siem]` (Wazuh Indexer) | `VIBEY_SIEM_URL` (`url`), `VIBEY_SIEM_USERNAME` (`username`), `VIBEY_SIEM_PASSWORD` (`password`), `VIBEY_SIEM_INDEX` (`index`) | `index` is `vibey-audit`; the rest unset |
+| `[surfaces]` | `VIBEY_SURFACES_ADAPTER_TIMEOUT_SECONDS` (`adapter_timeout_seconds`, an integer) | `10`: seconds each surface adapter waits on one network call |
+
+A surface with no URL (and, where it needs them, no credentials) stays in memory.
+
+### Engine credentials and client folders
+
+| Variable | Read by | Default and effect |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | `doctor`'s auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | Unset. claudeloop's credential. |
+| `OPENAI_API_KEY` | `doctor`'s auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY` and `CODEX_API_KEY`) | Unset. codexloop's credential. |
+| `CODEX_HOME` | `connect`, `doctor`'s `llm-tooling` section | Unset: `~/.codex`. Used only when it is an absolute path. |
+| `CLAUDE_CONFIG_DIR` | `connect`, `doctor`'s `llm-tooling` section | Unset: `~/.claude`. Used only when it is an absolute path. |
+| `XDG_CONFIG_HOME` | your configuration folder (not on macOS), Zed's config on Linux, the systemd user units | Unset or relative: `~/.config`. On macOS your configuration folder is `~/Library/Application Support/vibey`. |
+| `XDG_STATE_HOME` | `retry --start-worker`'s log, on every system; the run input store's local folder (not on macOS) | Unset: `~/.local/state` (for the run input store, a relative value counts as unset too). |
+| `DOCKER_HOST`, `CONTAINER_HOST` | `searxng install` | Unset. A daemon that is not a local socket is refused; `DOCKER_CONTEXT`, `DOCKER_CONFIG` and `CONTAINER_CONNECTION` are said to be ignored. |
+
+### What a child process receives
+
+**Engine sessions** never inherit the worker's environment. Each starts from an allow-list
+(`EngineEnvironmentPolicy`, `src/vibey/infrastructure/engines/engine_environment.py`):
+
+1. the system basics every process needs (`SYSTEM_ENVIRONMENT`): `PATH`, `HOME`, `USER`,
+   `LOGNAME`, `SHELL`, `TMPDIR`, `TMP`, `TEMP`, `LANG`, `LANGUAGE`, `TZ`, `TERM`, `COLORTERM`,
+   `NO_COLOR`, `COLUMNS`, `LINES`, the certificate-bundle and proxy variables, the `XDG_*`
+   folders, `__CF_USER_TEXT_ENCODING`, and every `LC_*`;
+2. the engine's own declared variables (`env_passthrough`) and its API credential (`auth_env`),
+   which [`vibey loops --json`](#vibey-loops) lists under `env`;
+3. what the project declares in [`[engine_environment]`](configuration.md#engine_environment):
+   `allow` for every engine, `engines.<engine id>` for one;
+
+plus the variables vibey itself gives every session (the non-secret search settings above, and
+for gptossloop and qwenloop the endpoint and model). Nothing can add a `VIBEY_*` or `PG*` name, or
+any name containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`, or the Brave key's other
+names: a project that declares one is refused when the worker is built. vibey's own Python
+environment (`VIRTUAL_ENV`, `VIRTUAL_ENV_PROMPT`, `PYTHONHOME`, `PYTHONPATH` and the matching
+`PATH` entries) is removed, so an engine does not install into or run vibey's interpreter.
+
+**Gate commands** (BUILD's verify and integrate gates, REVIEW's automated checks) start from the
+same system basics plus [`[gates] env_allow`](configuration.md#gates); `VIBEY_*`, `PG*` and
+`GIT_*` can never be declared, and vibey's Python environment is removed unless
+`gates.isolate_python_env = false`.
+
+**vibey's own `git` calls** run with the system basics alone, `GIT_CONFIG_NOSYSTEM=1`, and no
+hooks or file-system monitor (`src/vibey/infrastructure/git/clean_env.py`).
+
+`VIBEY_HUB_TOKEN` and `VIBEY_AGENT_TOKEN` are not read anywhere; they are among the names
+`vibey loops mcp add --env-allow` refuses, with the Brave key names, because what an MCP server
+prints reaches the model.
+
+The engine CLIs read further variables of their own; see each runner under
+`src/vibey_runners/` and [Other commands in the package](#other-commands-in-the-vibey-engine-package).
 | `VIBEY_HUB_URL` | `search`, `fetch`, `mcp --scope web`, inside an engine session | Set by the worker in a BUILD session that holds its own web grant: the running hub on this computer's loopback. With `VIBEY_WEB_TOKEN_FILE`, the commands ask the hub and never search in their own process ([what engine sessions are told](#what-engine-sessions-are-told)). Not yours to set: no allow-list can pass it to a session. |
 | `VIBEY_WEB_TOKEN_FILE` | as `VIBEY_HUB_URL` | The path of the session's token file, `<run folder>/web-token` (0600), never the token; read on every call. |
 | `VIBEY_WEB_STATE` | as `VIBEY_HUB_URL` | Set by the worker, alone, in a session it gave no web: `none:<reason>` (`no-hub`, `no-run-folder`, `no-token`, `not-given`). The commands then print the reason and exit 78. |
-| `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop, the runner on a Qwen model; any other set value disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config; with neither, qwenloop is off. |
-| `ANTHROPIC_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | claudeloop credentials. |
-| `OPENAI_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY`, `CODEX_API_KEY`) | codexloop credentials. |
-| `VIRTUAL_ENV` | engine session launch | Removed, together with `VIRTUAL_ENV_PROMPT`, `PYTHONHOME`, `PYTHONPATH`, and the matching `PATH` entries, from the environment passed to engine sessions, so an engine does not install into or run vibey's own interpreter. |
-
-Engine sessions do not inherit the caller's environment: each starts from an allow-list (the
-system basics every process needs, the engine's own declared variables, and what the project
-declares under [`[engine_environment]`](configuration.md#engine_environment)), plus vibey's own
-session web overlay: `VIBEY_HUB_URL` and `VIBEY_WEB_TOKEN_FILE` for a session that holds its own
-web grant, else `VIBEY_WEB_STATE=none:<reason>` alone
-([what engine sessions are told](#what-engine-sessions-are-told)). Build-gate commands start from
-the same system basics plus [`[gates] env_allow`](configuration.md#gates); git subprocesses
-inherit the caller's environment minus every `GIT_*` variable. The engine CLIs read further
-variables of their own; see each runner under `src/vibey_runners/`.

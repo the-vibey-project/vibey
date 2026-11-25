@@ -1,19 +1,96 @@
-# Phase Protocols
+---
+description: "What each of vibey's six phases does, job by job: the conversation DESIGN holds, how BUILD implements, verifies and integrates, how REVIEW routes, the publish step, the deployment stage set, and every human gate."
+---
+
+# Phase protocols: what each of vibey's six phases does
+
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** a project moves through ① DESIGN (an interview to a
+> testable spec), an optional VISUAL_DESIGN stage, ② BUILD (unattended: decompose, implement,
+> verify, integrate), ③ REVIEW (a demo and your verdict), then either DONE locally (after an
+> optional `review.publish` that pushes a branch and opens a pull request) or the opt-in
+> deployment stage set ④–⑥. Phases ①, ③, ④ and ⑥ ask you questions as parked gates; ② and ⑤
+> run alone. Read this page to know which job runs when and what each gate wants.
 
 > What all six phases actually do — the jobs they enqueue, the conversation
 > they hold, the artifacts they produce, and the conditions under which they hand
 > control to the next phase or loop back.
 
-> **Status as of 2026-09-15.** This plan predates the implementation. It has
-> been checked against the job handlers in `src/vibey/application/` and their
-> wiring in `src/vibey/bootstrap.py` (v0.6.0). Unmarked text describes what the
-> handlers do. Subsections marked **Planned, not implemented** keep the
-> original design target. The largest gaps: DESIGN runs on a single provider
-> rather than rotating engines; the visual stage covers only the screen
-> inventory, with no media generation; Phase ⑤ is a single discover → apply →
-> status-check handler; and gates do not time out. The plan did not yet
-> describe the bounded repair ladders, the grant answers that extend them
-> (ADR-0024), or the answer shapes in §7.
+> **How current this page is.** This plan predates the implementation. It was checked
+> against the job handlers in `src/vibey/application/` and their wiring in
+> `src/vibey/bootstrap.py` on `develop` at `d91a3791e` (vibey-engine 0.4.0) on 2026-11-24.
+> Unmarked text describes what the handlers do. Subsections marked **Planned, not
+> implemented** keep the original design target. The largest gaps: DESIGN runs on a single
+> provider rather than rotating engines; the visual stage covers only the screen inventory,
+> with no media generation; and Phase ⑤ is a single discover → apply → status-check handler.
+> Corrected in this revision: gates may time out to their default, but only for the kinds a
+> project declares under `[human_gates] timeout_defaults` (§7); the `review.publish` step
+> between a local REVIEW acceptance and DONE (§3.3); the full list of gate kinds (§7); the
+> DESIGN guard's unmapped-criteria check (§1.5); sovereign research's web search (§1.4);
+> and the verify independence rule in §8, which now matches §2.3. The plan did not yet describe the bounded repair ladders, the
+> grant answers that extend them (ADR-0024), or the answer shapes in §7. This page lives
+> under `docs/plans/`, which the published site leaves out on purpose; it is kept current
+> because the agent instruction files point here.
+
+## The idea, in one conversation
+
+> Daniel's sister had just had an extension built on her house, and he had brought the
+> builder's paperwork to the Professor's office.
+>
+> **Daniel:** Professor, why does vibey need six phases? Why not just "build it"?
+>
+> **Professor Feynman:** Look at your sister's paperwork. First an architect sat with her and
+> asked questions until the drawings were exact. Then the builders worked for weeks without
+> asking her anything. Then she walked round with the foreman and said "this window is wrong".
+>
+> **Daniel:** Design, build, review.
+>
+> **Professor Feynman:** And notice who talks to whom. The architect asks; the builders do
+> not. vibey keeps that rule strictly: DESIGN and REVIEW ask you questions, BUILD never does.
+> When BUILD is truly stuck it does not stand at your door waiting. It leaves a note, a
+> parked gate, and goes on with other work.
+>
+> **Daniel:** And deployment?
+>
+> **Professor Feynman:** That is moving in. Plenty of people want the extension and never
+> want it let out to tenants, so vibey asks, every time, and "no" is a perfectly good
+> ending. The picture stops in one place: a builder cannot loop back to the architect for a
+> small fix. vibey can: a clear finding in REVIEW goes straight back to BUILD; an unclear one
+> goes back to DESIGN.
+
+## See it on your machine
+
+1. Start a project; its first DESIGN job is enqueued.
+
+   ```bash
+   vibey new my-app
+   ```
+
+   You should see two lines, `project <project-id>` and `design job <job-id>` (each a UUID).
+   A worker (`vibey worker`) then runs the interview and parks its first question batch as a
+   gate.
+
+2. See what is waiting on you, with the command that answers each gate.
+
+   ```bash
+   vibey gates
+   ```
+
+   You should see each open gate with its kind (for example `question` during DESIGN) and
+   the exact `vibey answer` line to run.
+
+## Daniel's teach-back
+
+> **Daniel:** A project goes DESIGN, optional VISUAL_DESIGN, BUILD, REVIEW, then DONE or the
+> deployment phases. DESIGN and REVIEW talk to me through parked gates; BUILD and DEPLOY
+> EXECUTE run on their own. A pure guard decides each move, and REVIEW sends clear findings
+> back to BUILD and unclear ones back to DESIGN. Saying no to deployment is a successful
+> ending, and if the project declares `[publish]`, vibey pushes the work and opens a pull
+> request first.
+>
+> **Professor Feynman:** Right. One correction: "BUILD runs on its own" still allows gates.
+> A bounded repair ladder that runs out, or a spent budget, parks a gate for you; it just
+> never waits on stdin.
 
 ---
 
@@ -22,7 +99,7 @@
 ```mermaid
 sequenceDiagram
     actor U as Developer
-    participant S as Supervisor
+    participant S as vibey (CLI + handlers)
     participant Q as Queue
     participant E as Engines / provider
     participant L as Ledger
@@ -90,6 +167,10 @@ sequenceDiagram
             end
         else local_only
             S->>L: DeploymentDeclined
+            opt [publish] mode is interview or auto
+                Q->>E: review.publish: push branch + open PR (or create repo)
+                S->>L: PublishCompleted / PublishSkipped
+            end
             S->>U: DONE (local)
         end
     end
@@ -174,10 +255,17 @@ DESIGN jobs run in-process on one `DesignProvider`, chosen with
 - `gptossloop` is the sovereign provider, the preferred way to run and the
   default when no `--provider` is given (ADR-0027, ADR-0064; `qwenloop` is
   still accepted as its old name), on the Ollama server at `VIBEY_OLLAMA_URL` with the model
-  `VIBEY_OLLAMA_MODEL` (or `--ollama-model`). Set `VIBEY_EVIDENCE_DIR` to a
-  directory of operator-supplied reading: `design.research` refuses to invent
-  sources without it, and parks a `research_evidence` gate on the first
-  attempt naming the file it wants. Because synthesis depends on research,
+  `VIBEY_OLLAMA_MODEL` (or `--ollama-model`); unset, that is the Heretic v2 build of
+  GPT-OSS 20B (`domain/sovereign_model.py`, ADR-0099). For each research topic,
+  `design.research` reads, in order: the operator's own reading in `VIBEY_EVIDENCE_DIR`,
+  if there is a file for it; otherwise a web search through vibey's local SearXNG
+  (`VIBEY_SEARXNG_URL`, else loopback), with Brave Search as the backup only when
+  SearXNG fails and a key is set (ADR-0102; `vibey searxng install` provisions it). It
+  quotes what it finds with its URLs and never answers from the model's recollection.
+  When neither gives a source, it refuses (`SovereignResearchUnavailable`) and parks a
+  `research_evidence` gate on the first attempt, naming the file it wants; under
+  `[design.research] on_unavailable = "record_gap"` it records a `ResearchGapRecorded`
+  event instead and the spec states the gap. Because synthesis depends on research,
   the phase waits there until the reading is supplied and the gate answered.
   With this provider the worker's decomposer is the sovereign one too (§2.1).
 - `claudeloop` drives the interview, research, synthesis, and decomposition
@@ -210,6 +298,7 @@ as a silent omission.
 - 0 unsettled DESIGN jobs in the cycle: research, synthesis and spec have all run,
   so what is accepted is the spec this cycle synthesized, never a `spec.json` that
   was already on disk (the interview's completion only queues the rest of the chain)
+- 0 unmapped acceptance criteria (`TransitionEvidence.unmapped_criteria` is empty)
 - the developer's acceptance (issuing the command is the acceptance)
 - an explicit visual decision matching the target phase
 
@@ -472,11 +561,15 @@ only what it has.
 
 ```
 .vibey/worktrees/893c4fc1/1/
-├── item-001/     branch vibey/893c4fc1/1/item-001   ← claudeloop, LOW
-├── item-004/     branch vibey/893c4fc1/1/item-004   ← codexloop,  LOW
-├── item-005/     branch vibey/893c4fc1/1/item-005   ← cursorloop, LOW
+├── item-001/     branch vibey/893c4fc1/1/item-001   ← gptossloop, LOW
+├── item-004/     branch vibey/893c4fc1/1/item-004   ← claudeloop, LOW
+├── item-005/     branch vibey/893c4fc1/1/item-005   ← codexloop,  LOW
 └── integration/  branch vibey/893c4fc1/1/integration
 ```
+
+(Illustrative. With the default local-first selection every item goes to `gptossloop` while
+it is eligible; a paid engine appears only when no local engine is eligible or under hybrid
+dispatch's capped overflow. The plan's example named `cursorloop`, retired by ADR-0078.)
 
 Paths and branches come from `domain/worktree.py` (`WorktreeNaming`:
 `.vibey/worktrees/<scope>/<cycle>/<item>` on `vibey/<scope>/<cycle>/<item>`, `<scope>`
@@ -764,7 +857,30 @@ default `local_only`):
 - `vibey answer <gate-id> --choice deploy` → ledgers `DeploymentOptedIn` and
   enters the deployment stage set (§4);
 - `--choice local_only`, or any other answer → ledgers `DeploymentDeclined`
-  and transitions to `DONE` with local completion.
+  and transitions to `DONE` with local completion — **unless** the project
+  declares `[publish] mode` other than `off`, in which case it is not DONE yet
+  (below).
+
+**Publishing before DONE (`review.publish`).** When the choice is `local_only` and the
+project's `[publish] mode` (copied from `vibey.toml` at `vibey new`) is `interview` or
+`auto`, `review.deployment_choice` records `completion_mode = "local_then_publish"` and
+enqueues `review.publish` (15-minute lease) instead of moving to DONE
+(`application/review_deployment_choice_handler.py`, `application/review_publish_handler.py`):
+
+- **`off`** (the default) never reaches the job; the project finishes locally as above.
+- **`interview`** parks a `publish_interview` gate whose prompt shows exactly what would be
+  pushed and where; it has no default and never times out. Answers are
+  `{"choice": "accept_defaults" | "custom" | "skip", ...}`. A worker started with
+  `vibey worker --auto-publish` answers it `accept_defaults` itself.
+- **`auto`** publishes the proposal without a gate.
+
+A checkout with a remote gets its branch pushed and a pull request opened (a draft unless
+`[publish] draft = false`); one with no remote gets a new GitHub repository (private unless
+`[publish] visibility = "public"`, under `[publish] owner`). Nothing is forced, the default
+branch is never pushed to, and a retry after a partial failure finishes the work. A
+publisher that is not ready (`gh` missing or not logged in) parks on an
+`engine_misconfigured` gate. The outcome is a `PublishCompleted` or `PublishSkipped` event,
+then the project moves to DONE.
 
 There is no cancel option. **Planned:** the deployment question is asked
 again after any delivery loop that changes the artifact or its acceptance
@@ -1070,11 +1186,18 @@ class HumanGateRecord:             # the persisted human_gate row
     answered_by: str | None
 ```
 
-Both live in `application/dto.py`. `kind` is a plain string; the kinds in use
-are `question`, `approval`, `choice`, `escalation_exhausted`,
-`budget_exhausted`, `verify_repair_exhausted`, `integrate_repair_exhausted`,
-`deploy_interview`, `deploy_acceptance`, `deploy_demo_review`, and
-`deploy_failure_triage`.
+Both live in `application/dto.py`. `kind` is a plain string. The kinds vibey raises as
+of 2026-11-24 (a grep of `src/vibey/`):
+
+| Phase or source | Kinds |
+|---|---|
+| DESIGN | `question`, `research_evidence` |
+| REVIEW | `approval`, `choice` (the deployment choice), `review_evidence_missing`, `publish_interview` |
+| BUILD | `escalation_exhausted`, `budget_exhausted`, `ultra_needs_cap`, `verify_repair_exhausted`, `integrate_repair_exhausted`, `repair_not_converging`, `foreign_branch`, `loop_capabilities_unresolved`, `handoff_gate_failed`, `handoff_inputs_missing`, `too_many_wind_downs` |
+| Any engine run | `engine_misconfigured` (the runner exited 78, or a publisher is not ready) |
+| The queue itself | `attempts_exhausted`, `delivery_exhausted`, `defect` |
+| Deployment | `deploy_interview`, `deploy_acceptance`, `deploy_demo_review`, `deploy_failure_triage` |
+| Service bus | `bus_dead_lettered` |
 
 When a handler needs a human it returns `Park(request)`. The worker:
 
@@ -1100,12 +1223,41 @@ next run.
 | `--choice VALUE` | `{"choice": VALUE}` | `choice` (`local_only`, `deploy`), `deploy_failure_triage` |
 | `--raw '<json object>'` | the object | grants: `{"max_attempts": N}` (`escalation_exhausted`, `attempts_exhausted`), `{"max_rounds": N}` (`verify_repair_exhausted`, `integrate_repair_exhausted`), `{"max_dollars": N}` / `{"max_turns": N}` (`budget_exhausted`); review feedback or questions (`approval`); deployment elicitation (`deploy_interview`); consent (`deploy_acceptance`); `{}` retries once the reading is in place (`research_evidence`) |
 
-**Planned, not implemented.** Gates with a `default_answer` and a
-`timeout_at` would auto-resolve — for low-stakes choices during overnight
-runs — and be recorded as `AssumptionStated` so the decision is visible and
-travels through handoffs. `timeout_at` is stored on the gate row, but nothing
-reads it. Answering through the TUI or a notification action is also not
-implemented.
+### 7.2 Gates that answer themselves: only by declaration
+
+A gate never resolves because nobody answered it (sub-doctrine 12.d: silence is not
+consent). Two narrow, declared paths exist, and every answer either gives is recorded on the
+ledger as `GateAnswered`, by `gate-timeout` or `auto-answer`, through the same
+`GateAnswerService` every answer takes:
+
+- **Per-project timeouts** (the operator's ruling of 2026-09-30). A project lists, under
+  `[human_gates] timeout_defaults` in `vibey.toml` (copied into the project at `vibey new`),
+  each gate kind that may resolve to its stored `default_answer` and after how many minutes:
+
+  ```toml
+  [human_gates.timeout_defaults]
+  choice = 240               # the deployment choice resolves to local_only after 4 hours
+  ```
+
+  Only `choice`, `deploy_interview`, `deploy_failure_triage`, `deploy_acceptance` and
+  `deploy_demo_review` may be declared; naming any other kind is refused when the table is
+  read (`domain/gate_timeout.py`). The worker's idle loop runs the sweep
+  (`application/gate_timeouts.py`). A gate with no default never times out.
+- **One worker's auto-answers.** `vibey worker --auto-answer` (one project, up to
+  `--auto-answer-limit` answers, 30 by default) answers that project's DESIGN questions with
+  their own defaults and grants more attempts or repair rounds when a job runs out. It never
+  answers a spending gate, an approval or a review (`application/gate_auto_answers.py`).
+
+**Notices and reminders.** Whether anyone was told a gate is waiting is recorded, always:
+a notice when it is raised and reminders on the project's schedule, each recorded as
+`GateNotified` or, when no channel could take it, `GateNoticeUndeliverable`
+(`application/gate_notices.py`). The worker's idle loop sends them; `vibey gates --remind`
+sends them on demand.
+
+The original design also recorded an auto-resolved answer as `AssumptionStated`; as built
+it is a `GateAnswered` event. `timeout_at` on the gate row is still not what drives the
+sweep: the project's declared wait is. Answering through the TUI or a notification action
+is not implemented; the krypton clients answer through the hub.
 
 ---
 
@@ -1126,12 +1278,13 @@ injected DESIGN provider, decomposer, or visual producer (§1.4).
 | optional visual | `visual.plan` | `HIGH` | none |
 | ② | `build.decompose` / `build.plan` | `STANDARD` (fast path: from triage severity) | single provider |
 | ② | `build.implement` | `LOW` → ladder | **SWRR**; rotate on tier crossing, sticky on same-tier retry |
-| ② | `build.verify` | `LOW` | **SWRR**; **must differ** from implementer (enforced) |
+| ② | `build.verify` | `LOW` | **SWRR**; **must differ** from the implementer when the configured pool has another engine; a single-engine pool waives it by default and records the waiver, unless `verify.require_independent_review = true` (§2.3, ADR-0035) |
 | ② | `build.integrate` | — | none |
 | ③ | `review.demo` | `HIGH` | none (bandit and ruff subprocesses) |
 | ③ | `review.collect` | `HIGH` | none |
 | ③ | `review.triage` | `HIGH` | none (rule-based) |
 | ③ | `review.deployment_choice` | `LOW` | none |
+| ③→DONE | `review.publish` | — | none (`gh` and git; 15-minute lease; only when `[publish] mode` is not `off`, §3.3) |
 | ③→④ | `deploy.design` | `HIGH` | none (bridge) |
 | ④ | `deploy.interview` | `HIGH` | none |
 | ④ | `deploy.synthesize` | `HIGH` | none |
@@ -1153,5 +1306,35 @@ thing that writes the spec is not the thing that ran the interview, and the
 thing that verifies code is not the thing that wrote it. Only the second is
 enforced: `engine_selection.py` adds the job's `implementer_engine_id` to the
 exclusion set before rotation, and `BuildVerifyHandler` rejects a reviewer
-that matches it. The first is recorded on the `design.synthesize` job's
-requirement and waits for DESIGN to run through a selector.
+that matches it — whenever the configured pool has another engine. With a single-engine
+pool, independence is waived by default and the waiver is recorded as a decision
+(`d_verify_independence_<item>`) on the success path; a project that sets
+`verify.require_independent_review = true` gets the strict rule back, and a solo-pool
+verify then fails as a `VIBEY` error (§2.3,
+[ADR-0035](../architecture/decisions/0035-independence-is-the-default-not-an-absolute.md)).
+The first is recorded on the `design.synthesize` job's requirement and waits for DESIGN to
+run through a selector.
+
+---
+
+## When it goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| `vibey design accept` is refused with "N design job(s) still unsettled" | Research, synthesis or the spec has not finished for this cycle | Wait for the jobs (`vibey queue`), or answer the `research_evidence` gate that is holding research |
+| A `research_evidence` gate names a file | No local reading for that topic and web search found nothing usable or is not set up | Put the reading in `VIBEY_EVIDENCE_DIR` under the name it gives, or run `vibey searxng install`, then answer the gate |
+| The project sits in REVIEW after you chose `local_only` | `[publish] mode = "interview"` parked a `publish_interview` gate | Answer it with `accept_defaults`, `custom` or `skip` (`vibey gates` shows the command) |
+| An `engine_misconfigured` gate during `review.publish` | `gh` is missing or not logged in | Install `gh` and log in, then answer the gate to retry |
+| A gate you expected to time out is still waiting | Its kind is not declared under `[human_gates] timeout_defaults`, or it has no default | Declare it (only the five kinds in §7.2 may be), or answer it |
+
+## Where next
+
+- [rotation-and-engines.md](rotation-and-engines.md), for how BUILD chooses each engine.
+- [handoff-protocol.md](handoff-protocol.md), for what happens when an engine stops mid-item.
+- [`docs/reference/cli.md`](../reference/cli.md), for `vibey answer`, `vibey gates` and every
+  other command this page names.
+
+## Say it in one line
+
+vibey runs a project through design, build and review, asks you questions only as parked
+gates, never treats silence as a yes, and treats declining deployment as a finished project.

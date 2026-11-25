@@ -1,9 +1,51 @@
-# Fleet Program Runbook — vibey + the four *loop runners
+---
+description: "Historical and superseded: the August 2026 plan for five separate repositories, kept as a record only. No command in it may be run; changes land through the merge train and develop has no bypass."
+---
 
-> **Status as of 2026-09-15: superseded as an executable plan — do not hand
-> this file to a runner.** It was written 2026-08-15 for five separate
+# Historical: the fleet program runbook (superseded, do not run)
+
+> [!WARNING]
+> **Bottom Line Up Front (BLUF): this page is history, not instructions. Do not run any
+> command on it, and do not hand it to a runner or an agent as a plan.** It was written on
+> 2026-08-15 for five separate repositories that no longer exist, and it describes a way of
+> landing work, a runner merging its own pull request through an owner bypass, that is now
+> forbidden.
+>
+> **What superseded it:**
+>
+> - **One repository.** The runners and tools were absorbed into this repository as a uv
+>   workspace ([ADR-0021](../architecture/decisions/0021-one-tree-history-preserved.md)). The
+>   sibling GitHub repositories (`the-vibey-project/claudeloop`, `codexloop`, `qwenloop`,
+>   `vibey-gh`, `vibey-skills`, `vibey-bootstrap`) are gone, so every `~/git/<repo>`,
+>   `git fetch origin` and per-repo step below points at nothing.
+> - **One package.** Everything ships as `vibey-engine`, with the apps as `krypton-app`
+>   ([ADR-0037](../architecture/decisions/0037-one-distribution-one-version.md),
+>   [ADR-0069](../architecture/decisions/0069-two-packages-vibey-engine-and-krypton-app.md)).
+> - **Two of its runners are deleted.** `cursorloop` and `agyloop` were retired
+>   ([ADR-0078](../architecture/decisions/0078-retire-cursorloop-and-agyloop.md)); the runner
+>   packages today are `claude`, `codex` and `qwen` (plus `common`).
+> - **The merge train, and no bypass on `develop`.** Feature pull requests land only through
+>   `vibey-gh merge-train` (squash into `develop`); `develop` is promoted to `main` by
+>   `vibey-gh promote`. The `develop` ruleset declares `bypass_actors = []`
+>   (`[rulesets.integration]` in `.vibey-gh.toml`, the operator's decision of 2026-11-15), so
+>   no account, person or agent can merge past a red or pending check, and no agent approves
+>   or merges its own change. Unattended work is bounded by a gate a human defined, never by
+>   the agent's judgement, and never by `--admin`, `--no-verify` or any means of making a check
+>   stop applying ([ADR-0046](../architecture/decisions/0046-unattended-authority-is-bounded-by-a-gate.md);
+>   sub-doctrine 12.d). `vibey-gh rulesets` reconciles the declared rulesets with the forge.
+> - **Where the work is tracked now:** the decision records in `docs/architecture/decisions/`,
+>   the workstream runbooks in `docs/runbooks/expansion/` (start at `00-master-plan.md`), and
+>   the continuation prompts in `docs/continuation/`.
+>
+> Every shell block below is marked `HISTORICAL, DO NOT RUN`. Where the body states a rule
+> that is no longer true, a **Current rule** note beside it says what holds today. The rest
+> of the text is kept as it was, as the record of what was planned.
+
+> **Status as of 2026-09-15 (corrected 2026-11-24): superseded as an executable plan — do not
+> hand this file to a runner.** It was written 2026-08-15 for five separate
 > repositories. The runners now live in this repository under
-> `src/vibey_runners/{claude,codex,cursor,agy,qwen}` next to
+> `src/vibey_runners/{claude,codex,qwen}` (plus the shared `common`; the `cursor` and `agy`
+> runners were deleted by ADR-0078) next to
 > `src/vibey_tools/{gh,skills,bootstrap}`, as one uv workspace (ADR-0021); the
 > sibling GitHub repositories no longer exist, so the `~/git/<repo>` checkouts,
 > `git fetch origin` steps and per-repo PR flow below point at nothing. A fifth
@@ -14,7 +56,8 @@
 >
 > **Also superseded, 2026-09-18:** every "publishable to TestPyPI and then PyPI"
 > and per-repo publish-order step below assumes five distributions. There is one:
-> the whole tree ships as `vibey` (ADR-0037). Read those steps as history.
+> the whole tree ships as `vibey-engine` (ADR-0037, renamed by ADR-0069), with the apps as
+> `krypton-app`. Read those steps as history.
 >
 > **Landed since:** §Coverage for vibey (all four layers at 100% branch in
 > `ci.yml`, ADR-0023); §1.4d for codexloop and cursorloop; §2.1 (`EngineSelector`
@@ -22,22 +65,31 @@
 > `MAX_WIND_DOWNS = 3`); §2.5 (`tests/live/`, ADR-0030); §3.1 (public
 > repository, docs site at
 > <https://the-vibey-project.github.io/vibey/main/>, PyPI releases).
-> **Still open:** §1.4d for agyloop; §1.5; §1.7 (no API, MCP, SDK or OpenClaw
-> surface; `notify/webhook.py` is still unwired); §1.8.1–§1.8.3; the
+> **Still open (as of 2026-09-15):** §1.4d for agyloop; §1.5; §1.7 (no API, MCP, SDK or
+> OpenClaw surface; `notify/webhook.py` is still unwired); §1.8.1–§1.8.3; the
 > `FakeAzureClient` consolidation and AKS decision in §1.8.4; most of §1.8.5;
-> §2.3; §2.4; §2.6; §3.4.
+> §2.3; §2.4; §2.6; §3.4. *(2026-11-24: §1.4d for agyloop is moot, since agyloop was
+> retired. Vibey now has an HTTP API, the hub `vibey serve`
+> ([ADR-0068](../architecture/decisions/0068-the-hub.md)), an MCP server, `vibey mcp`, and an
+> ACP agent, `vibey acp` (ADR-0100, ADR-0101). The webhook is wired through
+> `NotificationService` (`infrastructure/notify/service.py`). For §2.6, run inputs landed as
+> `vibey inputs add --paste/--file` (ADR-0104, ADR-0105) and the locked capability snapshot as
+> `run --capabilities PATH` (ADR-0103).)*
 >
-> **Runner gates:** the monorepo `ci.yml` runs vibey's gates and the
-> `vibey-gh`/`vibey-skills`/`vibey-bootstrap` suites, but no job runs the
-> `src/vibey_runners/*` test suites, so the runners' per-layer floors are
-> enforced only when run locally (`cd src/vibey_runners/<runner> && uv run pytest …`).
-> ADR-0022 records that absorbed packages keep their gates.
+> **Runner gates (corrected 2026-11-24):** the monorepo `ci.yml` `tools` matrix runs the
+> runners' own suites on Python 3.12, 3.13 and 3.14: claudeloop and codexloop with their
+> per-layer 100% floors (codexloop on macOS too), qwenloop, and vibey-runners-common at
+> 100%, beside the `vibey-gh`/`vibey-skills`/`vibey-bootstrap` suites. ADR-0022 records that
+> absorbed packages keep their gates. (The 2026-09-15 text said no job ran the runner
+> suites; that is no longer true.)
 >
 > Version pins, the "Verified current state" table, and the audit defects below
 > are historical.
 
-> **This document is an executable plan.** It is written to be handed to
-> `claudeloop run` as the plan file for an unattended session. Task ordering is
+> **Historical text, no longer true:** ~~This document is an executable plan.~~ It was
+> written to be handed to `claudeloop run` as the plan file for an unattended session.
+> **Current rule:** it is not an executable plan and must not be handed to any runner or
+> agent; see the banner at the top. Task ordering is
 > the §Sequencing table at the bottom; work the phases in order, and do not start
 > a later phase while an earlier one is red.
 >
@@ -87,7 +139,7 @@ All five on `develop`, in sync with origin, CI green.
 | | vibey | claudeloop | agyloop | cursorloop | codexloop |
 |---|---|---|---|---|---|
 | `application/interfaces/` | ✅ 12 | ✅ 8 | ✅ 8 | ✅ 7 | ✅ 9 |
-| `domain/verbosity.py` + `-v/-vv/-vvv` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `domain/verbosity.py` + `-v/-vv/-vvv` *(historical: since #1898, `vibey -v` prints the version and verbosity is `-d`/`--verbose`)* | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `domain/forecast.py` (capacity) | n/a | ✅ | ✅ | ✅ | ✅ |
 | `domain/handoff_marker.py` | n/a | ✅ | ✅ | ✅ | ✅ |
 | `WindDownAndFinish` | n/a | ✅ | ✅ | ✅ | ✅ |
@@ -141,8 +193,16 @@ The runbook from here is executed **by claudeloop**, not by hand.
 - **PR + auto-merge on green.** Each run pushes its branch, opens a PR, and merges when
   every required check passes. **A passing CI is the only thing between a bad plan and
   `develop`** — which is why §Coverage gates at 100% *first*, before autonomy is turned on.
+
+  > **Current rule (2026-11-24):** a run does not merge its own pull request. Feature pull
+  > requests land only through `vibey-gh merge-train`, which needs the required approval and
+  > every required check; `develop` has `bypass_actors = []`. See the banner at the top.
 - **Guardrails that must be in place before the first autonomous run:**
   - branch protection already enforces PR + all checks (done; bypass for owner + Cursor app)
+    *(**Current rule:** `develop` has no bypass actors at all, and the Cursor app is gone with
+    cursorloop; only `main` keeps `["OrganizationAdmin", "RepositoryRole:5"]`, for the one
+    controlled rebase of a promotion. Both are declared in `.vibey-gh.toml`
+    `[rulesets.integration]` and `[rulesets.release]`.)*
   - `--wind-down-at` enabled so a run hands off rather than dying mid-task
   - `--max-dollars` / `--max-turns` per run, and `[credits] ceiling_usd`
   - the repo's own scope guard: no writes outside the worktree
@@ -449,7 +509,18 @@ Effort stays **high/standard** as today — this widens *inputs*, not effort.
   credentials) and `Integration:1210556` (the Cursor app); everyone else needs PR +
   1 review + all checks. If Codex/Antigravity ever need to be revocable independently,
   they need their own GitHub Apps — today revoking one revokes all.
-- **3.4 Close the publish hole** — **Status 2026-09-15: still open.** The workflow is now
+
+  > **Current rule (2026-11-24):** this is no longer the configuration. The rulesets are
+  > declared in `.vibey-gh.toml` and reconciled by `vibey-gh rulesets`. `develop`
+  > (`[rulesets.integration]`) has `bypass_actors = []` since the operator's decision of
+  > 2026-11-15, so no owner credential, CLI or app can merge past a red or pending check;
+  > everything lands through the merge queue. `main` (`[rulesets.release]`) keeps
+  > `["OrganizationAdmin", "RepositoryRole:5"]` and allows only rebase merges, for promotion.
+  > The Cursor app integration went with cursorloop.
+- **3.4 Close the publish hole** — **Status 2026-09-15: still open.** *(2026-11-24: there is
+  no `release.yml` now. The workflow named "Release" is `.github/workflows/vibey-engine.yml`,
+  which publishes `vibey-engine` to TestPyPI from `develop` and to PyPI from `main`, with
+  `krypton-app.yml` doing the same for `krypton-app`.)* The 2026-09-15 text: the workflow is now
   `.github/workflows/release.yml` (owned by `vibey-gh`, ADR-0028: `develop` publishes
   `vibey-dev` to TestPyPI, `main` publishes to PyPI); `testpypi` and `pypi` each `needs:`
   only `build`, and `pypi` does not depend on `verify-testpypi`. Original text:
@@ -463,7 +534,9 @@ Effort stays **high/standard** as today — this widens *inputs*, not effort.
 
 ## Verification
 
-```bash
+```text
+# HISTORICAL, DO NOT RUN: written for five repositories that no longer exist (see the banner).
+# Today's gates are in CLAUDE.md "Commands worth memorizing" and .github/workflows/ci.yml.
 # every repo — the gate that must pass before anything merges
 rm -f .coverage*                      # accumulated data silently inflates the number
 for L in domain application infrastructure cli; do
@@ -496,7 +569,7 @@ uv run pytest tests/fakes/test_port_parity.py    # every port has a conforming f
 # Wave 2
 uv run pytest -m live                            # real pg + git + binaries, scripted models
 vibey new --attach ./spec.pdf --from-github o/r@main --web-search --deep-research
-vibey start                                      # onboarding on a fresh machine
+vibey start                                      # onboarding on a fresh machine (never built: there is no `vibey start`; see `vibey install` and `vibey doctor`)
 
 # Wave 3  (the docs site is now built with properdocs, not mkdocs)
 mkdocs build --strict && python -m build && twine check --strict dist/*
@@ -517,8 +590,8 @@ mkdocs build --strict && python -m build && twine check --strict dist/*
 
 ## How this runbook is executed
 
-`claudeloop` 0.5.5 (0.8.0 in this repository as of 2026-09-15) was meant to run this
-file unattended; see the status banner before trying. The three things that make an
+`claudeloop` 0.5.5 (0.8.0 in this repository as of 2026-09-15; 0.4.0 since the #1898 version
+reset) was meant to run this file unattended. **Do not try:** see the banner at the top. The three things that make an
 unattended run safe here are a **disposable worktree**, an explicit **`--cwd` on
 every subcommand**, and **hard budget caps** — the runner will otherwise default
 its working directory to wherever it was invoked, which is how an earlier session
@@ -526,7 +599,9 @@ committed unrelated work.
 
 ### Per-repo invocation
 
-```bash
+```text
+# HISTORICAL, DO NOT RUN: ~/git/$REPO and the sibling repositories no longer exist, and
+# agyloop and cursorloop were deleted (ADR-0078). See the banner at the top.
 REPO=claudeloop                                   # or vibey|agyloop|cursorloop|codexloop
 PHASE=a-coverage                                  # one phase per run, per the Sequencing table
 WT=$HOME/.cache/fleet-worktrees/$REPO-$PHASE
@@ -575,7 +650,8 @@ is working with fewer inputs than one driven by claudeloop:
 | — | `--ramp N` | pace the first N turns against acceleration 429s |
 | — | `--max-tokens` | agyloop meters tokens as well as dollars |
 
-```bash
+```text
+# HISTORICAL, DO NOT RUN: agyloop was retired and deleted (ADR-0078); ~/git/agyloop is gone.
 REPO=agyloop
 PHASE=a-coverage
 WT=$HOME/.cache/fleet-worktrees/$REPO-$PHASE
@@ -608,7 +684,8 @@ booted the SDK harness regardless and died with
 
 Steering agyloop:
 
-```bash
+```text
+# HISTORICAL, DO NOT RUN: agyloop was retired and deleted (ADR-0078).
 agyloop watch  --run-id "$REPO-$PHASE" --cwd "$WT" --stream
 agyloop logs   --run-id "$REPO-$PHASE" --cwd "$WT" --follow --chatter
 agyloop status --run-id "$REPO-$PHASE" --cwd "$WT"
@@ -618,7 +695,8 @@ agyloop stop   --run-id "$REPO-$PHASE" --cwd "$WT"        # no soft stop until �
 
 Watch a run already in flight, or replay one:
 
-```bash
+```text
+# HISTORICAL, DO NOT RUN: these steer the per-repo runs above, which no longer exist.
 claudeloop watch --run-id "$REPO-$PHASE" --cwd "$WT" --stream     # live, full chat
 claudeloop watch --run-id "$REPO-$PHASE" --cwd "$WT" --replay --speed 4
 claudeloop logs  --run-id "$REPO-$PHASE" --cwd "$WT" --follow --chatter full
@@ -627,7 +705,8 @@ claudeloop status --run-id "$REPO-$PHASE" --cwd "$WT"
 
 Steer or stop it without killing it:
 
-```bash
+```text
+# HISTORICAL, DO NOT RUN: these steer the per-repo runs above, which no longer exist.
 claudeloop prompt "reprioritise: finish the CLI layer first" --at-break \
   --run-id "$REPO-$PHASE" --cwd "$WT"
 claudeloop wind-down --run-id "$REPO-$PHASE" --cwd "$WT" --reason rotate   # soft: exits 75
@@ -643,18 +722,33 @@ elsewhere" from "this failed".
 
 | code | meaning | next step |
 |---|---|---|
-| 0 | done marker emitted, work complete | merge the PR |
+| 0 | done marker emitted, work complete | merge the PR *(current rule: a person approves it and it lands through `vibey-gh merge-train`; the run never merges it)* |
 | 75 | wound down on purpose | resume, or hand the branch to another runner |
 | 130 | operator stopped it | read `stop-summary.md`, then resume |
 | 1 | failed | read the log; do not merge |
 
 ### Landing the work
 
+> [!CAUTION]
+> **Current rule (2026-11-24): the procedure in this section is forbidden.** No run, agent
+> or person merges a pull request by its own credentials. Feature pull requests land only
+> through the merge train (`vibey-gh merge-train`), which squashes into `develop` after the
+> required approval and every required check. `develop` declares `bypass_actors = []`
+> (`[rulesets.integration]` in `.vibey-gh.toml`, the operator's decision of 2026-11-15), so
+> no owner credential can skip a review or a check. An agent never approves or merges its
+> own change, and never uses `--admin`, `--no-verify` or any other means whose purpose is to
+> make a check stop applying ([ADR-0046](../architecture/decisions/0046-unattended-authority-is-bounded-by-a-gate.md);
+> sub-doctrine 12.d; CLAUDE.md non-negotiables). Work done unattended lands as a pull
+> request through the merge train or it does not land.
+
+The 2026-08-15 text, kept as history:
+
 Branch protection requires a PR and all checks; the owner's credentials bypass
 the review requirement, so the run can open and merge its own PR once CI is
 green. It must never merge red.
 
-```bash
+```text
+# HISTORICAL, DO NOT RUN: a self-merge through an owner bypass. Forbidden; see the note above.
 cd "$WT"
 gh pr create --base develop --fill
 gh pr checks --watch
@@ -664,7 +758,15 @@ cd ~/git/$REPO && git worktree remove "$WT"
 
 ### Cleanup
 
-```bash
+```text
+# HISTORICAL, DO NOT RUN: cleanup for the per-repo worktrees above.
 git worktree list
 git worktree prune
 ```
+
+---
+
+## Say it in one line
+
+This is the August 2026 plan for five repositories that no longer exist; it is kept as a record,
+and none of its commands may be run, because work now lands only through the merge train.

@@ -4,15 +4,31 @@ AI coding agents can write the code. Getting it delivered still takes a person:
 re-prompting an agent that lost the thread, re-explaining everything after a crash,
 restarting the run when one vendor's credits give out at 2 a.m.
 
-**vibey is a free, open-source orchestrator for AI coding agents** — a program that runs
-a team of them for you. It interviews you until the specification is precise, builds
-unattended on local or paid agents, stops only for the decisions that are yours, and
-writes every step to a record that can only be added to — an append-only ledger in a
-PostgreSQL database — so a crashed or out-of-credit agent's work is picked up again
-rather than lost.
+**vibey is a free, open-source orchestrator for AI coding agents**: a program that runs a team
+of them for you, the way a project manager runs a team. It interviews you until the
+specification is precise, builds unattended on agents that run on your own machine first and on
+paid ones only if you allow them, stops only for the decisions that are yours, and writes every
+step to a ledger in PostgreSQL that can only be added to, so a crashed or out-of-credit agent's
+work is picked up again rather than lost.
 
-> [!IMPORTANT]
-> **Work in progress — not a final product:** vibey is currently in active development and is not yet a final product. Features, interfaces, and APIs are actively evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+**Who it is for**, in this order ([ADR-0087](docs/architecture/decisions/0087-the-six-audiences-in-order.md)): FOSS developers who already use
+Claude Code, Codex or a local model, want finished, reviewed work rather than one session at a
+time, and may build vibey with us; freelancers and freelance clients, who need fixed-scope delivery
+with hard budget caps; universities and
+academia, who can study and cite a working design for durable, auditable agent orchestration
+([the paper](https://the-vibey-project.github.io/vibey/main/paper/)); governments and their militaries, who can
+[keep a record that cannot be quietly rewritten](docs/guides/outcomes/keep-a-tamper-evident-record.md); non-profit
+orgs and other small mission-driven teams, who can
+[cap what agents spend](docs/guides/outcomes/cap-agent-spending.md) and
+[run them on their own hardware](docs/guides/outcomes/run-agents-on-your-own-hardware.md)
+([the non-profit demo](docs/guides/demos/non-profit.md)); and industry teams. Each audience is meant to have its own demo; the non-profit one is written, and the other five are not yet.
+
+**The mission:** a free, open, censorship-free replacement for Claude Code and Codex that writes
+code the way a principal software engineer does, and in time an autonomous general intelligence.
+That is where the project is going, not what it does today: today vibey drives Claude Code,
+Codex and a local model rather than replacing them
+([why](#does-vibey-replace-claude-code-or-codex)), and its own scorecard measures how far it
+still is from running without a person ([Status](#status)).
 
 **Never written code?** You can still read this. *Code* is text files of
 instructions computers run; an *AI coding agent* is a program that writes and
@@ -22,39 +38,108 @@ team of those agents from your first description to deployed software, the
 way a project manager runs a team — asking you questions up front, checking
 the work, and only interrupting you when a decision is truly yours.
 
-**Who it is for**, in this order ([ADR-0087](docs/architecture/decisions/0087-the-six-audiences-in-order.md)): FOSS developers who already use
-Claude Code, Codex or a local model, want finished, reviewed work rather than one session at a
-time, and may build vibey with us; freelancers and freelance clients, who need fixed-scope delivery
-with principal-engineer quality guarantees and hard budget caps; universities and
-academia, who can study and cite a working design for durable, auditable agent orchestration
-([the paper](https://the-vibey-project.github.io/vibey/main/paper/)); governments and their militaries, who can
-[keep a record that cannot be quietly rewritten](docs/guides/outcomes/keep-a-tamper-evident-record.md); non-profit
-orgs and other small mission-driven teams, who can
-[cap what agents spend](docs/guides/outcomes/cap-agent-spending.md) and
-[run them on their own hardware](docs/guides/outcomes/run-agents-on-your-own-hardware.md)
-([the non-profit demo](docs/guides/demos/non-profit.md)); and industry teams. Each audience is meant to have its own demo; the non-profit one is written, and the other five are not yet.
+<!-- standard-block:install:start -->
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** One command installs vibey and gets a new macOS or Linux
+> machine ready to run a first project on your own hardware. About 15 minutes, plus the model
+> download of roughly 12 GB.
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --full
+> ```
+>
+> It installs `uv` and Python if you lack them, then vibey with its hub, PostgreSQL, a local
+> database, Ollama, the default model, and the connection to your editors, and ends by running
+> `vibey doctor`. Each step is announced first and can be skipped (`VIBEY_FULL_POSTGRES=0`,
+> `VIBEY_FULL_DATABASE=0`, `VIBEY_FULL_OLLAMA=0`, `VIBEY_FULL_MODEL=0`, `VIBEY_FULL_CONNECT=0`).
+> On Linux it asks for your sudo password, and on macOS it needs Homebrew. Run it again to repair
+> an install.
+>
+> **Afterwards, two things are yours:** add the `export VIBEY_PG_URL=...` line it prints to your
+> shell profile, and require `scram-sha-256` in `pg_hba.conf` (`vibey doctor` says so until you do).
+> Without `--full`, the same command installs only vibey, and `vibey doctor` lists what is missing.
+<!-- standard-block:install:end -->
+
+<!-- remove-after-release:start -->
+**Until the next release:** `--full` calls commands added in pull request #1978, so it works from the release after that one. Until then the plain `install.sh | sh` form installs only vibey, without the hub; follow [Set it up by hand](#set-it-up-by-hand) for the rest.
+<!-- remove-after-release:end -->
+
+<!-- standard-block:llm-driver:start -->
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** Four steps let Claude Code run your vibey projects: start the
+> hub, say where projects live, connect Claude Code, and ask it. About 5 minutes after the install.
+>
+> 1. **Start the hub** in a terminal where `VIBEY_PG_URL` is exported (the installer printed the
+>    line): `vibey hub start`
+> 2. **Say where projects live.** Add this to your own `vibey.toml` (macOS:
+>    `~/Library/Application Support/vibey/vibey.toml`, Linux: `~/.config/vibey/vibey.toml`):
+>    `[hub]` then `projects_root = "~/vibey-projects"`. Without it, starting a project from the
+>    LLM is refused.
+> 3. **Connect Claude Code** from the folder you will work in:
+>    `vibey connect --client claude_code --yes`. It writes `./.mcp.json` there and saves the old
+>    file as `.vibey.bak`. Leave out `--client` and it writes the config for every client it knows.
+> 4. **Ask.** Run `claude` in that folder, approve the `vibey` server, and type: *Use the vibey
+>    tools: list my vibey projects and any open gates, then tell me what each one is waiting on.*
+>
+> Claude Code gets 16 tools: start a project, start work, pause work, abandon a project, list
+> projects, status, gates, answer a gate, queue, ledger, budget, lanes, loops, doctor, and search
+> and fetch the web through the hub. The hub refuses it the gates that spend
+> money, and its instructions say to abandon a project only after you confirm. One known gap: over
+> MCP it can answer the deployment opt-in gate, which asks "deploy or stay local"; only ACP refuses
+> that ([`SECURITY.md`](https://github.com/the-vibey-project/vibey/blob/develop/SECURITY.md)). Codex, Cursor, VS Code,
+> Claude Desktop, Gemini CLI and any ACP client such as Zed work the same way through
+> `vibey connect --client <name>` or `vibey acp`.
+<!-- standard-block:llm-driver:end -->
+
+Each of those, step by step and with what to do when a step fails:
+[the install guide](docs/guides/install.md), and
+[drive vibey from another LLM](docs/guides/drive-from-an-llm.md).
+
+> It was raining, and Daniel came in shaking his umbrella and holding a question.
+>
+> **Daniel:** Professor, the coding agents already write code. What is vibey for?
+>
+> **Professor Feynman:** Picture a building site. You have good bricklayers. Who decides what
+> gets built, in what order, and who checks that the wall is straight?
+>
+> **Daniel:** The project manager.
+>
+> **Professor Feynman:** That is vibey. It questions you until the plan is clear, hands each
+> piece to a coding agent, one on your own machine first, checks the work, and comes back to
+> you only for what is yours: the design, the review, deploying, and money.
+>
+> **Daniel:** And if a worker walks off halfway, or runs out of credit?
+>
+> **Professor Feynman:** Then the site diary saves you. Every question, answer, decision and
+> handoff is written in it first, and you may only add lines, never change one. The next
+> worker reads the diary and starts where the last one stopped.
+>
+> **Daniel:** So the work lives in the diary, not in any one agent's head.
+>
+> **Professor Feynman:** Yes. The picture stops in one place: a paper diary is only as honest as
+> whoever holds the pen. This one is a ledger in PostgreSQL that refuses every change and
+> deletion, with a chain of fingerprints that shows if anyone tried.
+>
+> **Daniel's teach-back:** vibey is a project manager for coding agents. It questions me until
+> the specification is exact, gives the work to agents, local ones first, and checks it. It
+> stops only for my decisions. Every step goes into a ledger that can only grow, so when an
+> agent fails, the next one carries on from the ledger.
+>
+> **Professor Feynman:** Right, with one thing to add: checking is not approving. The review is
+> yours, and nothing is deployed unless you say so.
+
+*Professor Feynman and Daniel are written for this documentation; their words are not quotations
+from the real Richard Feynman.*
 
 **What makes it different** — each claim links to what proves it:
 
 - **A crash loses no job.** Jobs are held under expiring leases and reclaimed when a worker dies. A [chaos test](tests/infrastructure/db/test_chaos.py) runs 8 workers through 500 jobs, abandoning each claim with probability 0.2, and passes only if no job is lost or committed twice — [the case study](docs/case-studies/how-vibey-survives-a-crashed-agent.md) tells how.
 - **The record cannot be quietly rewritten.** The database refuses every update and delete to the ledger ([ADR-0055](docs/architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)), and a SHA-256 hash chain over its events makes any edit visible ([`ledger_chain.py`](src/vibey/domain/ledger_chain.py)). **See one for yourself in the [ledger explorer](https://the-vibey-project.github.io/vibey/main/explorer/)**: a public, searchable view of a real project's ledger, where your browser checks each record's digest.
-- **Local first, paid by choice.** The default engine runs GPT-OSS 20B on your own machine through Ollama ([ADR-0064](docs/architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)); a paid engine runs only when no local one can ([ADR-0038](docs/architecture/decisions/0038-local-engines-are-preferred-first.md)).
+- **Local first, paid by choice.** The default engine runs the Heretic v2 build of GPT-OSS 20B on your own machine through Ollama ([ADR-0064](docs/architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md), [ADR-0099](docs/architecture/decisions/0099-heretic-v2-of-gpt-oss-20b-is-the-sovereign-default-model.md)); a paid engine runs only when no local one can ([ADR-0038](docs/architecture/decisions/0038-local-engines-are-preferred-first.md)).
 - **You decide what matters.** Design, review and deployment wait for your recorded answer, and a waiting question parks its job instead of blocking a worker ([ADR-0009](docs/architecture/decisions/0009-human-gates-are-parked-jobs.md)).
 - **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](docs/architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](docs/architecture/decisions/) (106 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](.github/workflows/vibey-engine.yml)).
 
 **See a real ledger** — no install, no account: [open the ledger explorer](https://the-vibey-project.github.io/vibey/main/explorer/), search every public decision, finding and phase change of a real project, and check each record yourself.
-
-**Try it** — Python 3.12+ and PostgreSQL 14+, on macOS or Linux:
-
-```bash
-uv tool install vibey-engine   # or: pipx install vibey-engine
-# or, with nothing installed yet — installs vibey AND krypton (also reinstalls and repairs):
-# curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
-vibey doctor                   # checks engines, local PostgreSQL, and the ledger guard
-vibey connect --yes            # plug vibey into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI
-```
-
-**Install every krypton interface (Desktop, Mobile, Web, VS Code, Browser & Chat MCP) — Bottom Line Up Front (BLUF):** Krypton and the vibey engine are the free, censorship-free, open-to-everyone Claude Code and Codex killer designed to replace both. It writes code the way a principal software engineer does — delivering rigorous, tested, high-quality architectures rather than unverified slop, 100% free of charge. Powered by an autonomous delivery loop, it is an AGI with superintelligence coming soon. Jump straight to [Install](#install) or the [step-by-step install guide](docs/guides/install.md) and [downloads page](docs/guides/downloads.md) for copy-and-paste instructions across every platform (macOS, Ubuntu, Fedora, Arch, Flatpak, VS Code, VSCodium, Cursor, Android, iOS, and Web), with no coding experience required.
 
 The full setup is under [Install](#install), then [Quickstart](#quickstart). Came with a
 specific problem? [What do you want to do?](docs/guides/outcomes/index.md) answers six,
@@ -95,6 +180,7 @@ workspace members (ADR-0021).
 - [Krypton client interfaces](#krypton-client-interfaces)
 - [Install](#install)
 - [Quickstart](#quickstart)
+- [Drive vibey from another LLM](#drive-vibey-from-another-llm)
 - [Command reference](#command-reference)
 - [Configuration](#configuration)
 - [Notifications](#notifications)
@@ -112,6 +198,7 @@ workspace members (ADR-0021).
 - [Join the community](#join-the-community)
 - [Related projects](#related-projects)
 - [License](#license)
+- [Say it in one line](#say-it-in-one-line)
 
 ## What problem this solves
 
@@ -130,17 +217,21 @@ in one vendor's chat session.
 
 | | |
 |---|---|
-| Runs on | macOS / Linux, local. No cloud control plane required. |
+| Version | 0.4.0, held below 1.0 (`[version] max_major = 0` in `.vibey-gh.toml`) |
+| Runs on | macOS / Linux, local. No cloud control plane required. Windows is not supported. |
 | Language | Python 3.12+ |
-| Queue | PostgreSQL (`FOR UPDATE SKIP LOCKED`) |
-| Engines | [`claudeloop`](src/vibey_runners/claude), [`codexloop`](src/vibey_runners/codex) — plus the local runner [`src/vibey_runners/qwen`](src/vibey_runners/qwen) as two engines — `gptossloop`, the sovereign default on GPT-OSS 20B (on by default, and the sovereign DESIGN provider), and the opt-in `qwenloop` on Qwen — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038, ADR-0064). All three runners ship inside the `vibey-engine` package (ADR-0037). |
+| Queue | PostgreSQL 14 to 18 (`FOR UPDATE SKIP LOCKED`) |
+| Engines | Paid: [`claudeloop`](src/vibey_runners/claude) and [`codexloop`](src/vibey_runners/codex). Local, from the runner in [`src/vibey_runners/qwen`](src/vibey_runners/qwen): `gptossloop`, the sovereign default on the Heretic v2 build of GPT-OSS 20B (on by default, and the sovereign DESIGN provider), and the opt-in `qwenloop` on Qwen (`qwen3:14b`); plus `claudeloop-local`, the claudeloop binary on a local backend profile (opt-in, no command of its own). Local engines are preferred first when switched on (ADR-0027, ADR-0038, ADR-0064, ADR-0099). `cursorloop` and `agyloop` are retired ([ADR-0078](docs/architecture/decisions/0078-retire-cursorloop-and-agyloop.md)). All three runners ship inside the `vibey-engine` package (ADR-0037). |
 | State dir | `.vibey/` |
 | Env prefix | `VIBEY_` |
-| Done marker | Each loop's own marker (`CLAUDELOOP_TASK_FULLY_COMPLETE`, `QWENLOOP_TASK_FULLY_COMPLETE`, etc.) |
+| Done marker | Each loop's own marker: `CLAUDELOOP_TASK_FULLY_COMPLETE`, `CODEXLOOP_TASK_FULLY_COMPLETE`, and the local runner's `QWENLOOP_TASK_FULLY_COMPLETE` |
 
 ## Krypton client interfaces
 
-Krypton is the client family for vibey, delivering an intuitive interface across mobile devices, desktop workstations, and code editors.
+Krypton is the client family for vibey: one interface across phones, the browser, desktop
+workstations and code editors. The apps reach vibey through the hub (`vibey serve`, on
+`http://127.0.0.1:8765/` by default); the VS Code extension can also drive vibey and a local
+model on your own computer.
 
 ### Mobile & Web (`clients/app`)
 
@@ -152,7 +243,7 @@ Built with React Native and Expo for iOS, Android, and Web:
 
 ### Desktop Native (`clients/desktop`)
 
-Built with GTK 4 and libadwaita for macOS and Linux:
+Written in C on GTK 4 and libadwaita for macOS and Linux:
 
 | Desktop Chat Workspace | Live Inspector Drawer |
 | :---: | :---: |
@@ -160,7 +251,8 @@ Built with GTK 4 and libadwaita for macOS and Linux:
 
 ### VS Code Extension (`clients/vscode`)
 
-Right-hand docked chat participant for VS Code, VSCodium, and Cursor:
+Right-hand docked chat participant for VS Code, VSCodium, and Cursor. In the chat, address it
+as `@krypton`:
 
 | VS Code Right-Hand Chat Participant |
 | :---: |
@@ -170,107 +262,68 @@ Right-hand docked chat participant for VS Code, VSCodium, and Cursor:
 
 ## Install
 
-> **Bottom Line Up Front (BLUF) — Krypton and vibey are the free, censorship-free Claude Code and Codex killer, replacing both with principal-engineer quality code and AGI superintelligence coming soon:**
->
-> Krypton and the vibey engine are completely free, open to everyone, and completely censorship-free. They replace both Claude Code and Codex by writing code the way a principal software engineer does: grounded in specifications, verified against strict gates, and delivering real, robust software without slop. As an autonomous AGI system with superintelligence coming soon, you can run it entirely on your own local hardware or drive it across desktop, mobile, browser, and IDE interfaces without paying vendor subscriptions.
->
-> *Never used a terminal?* On **macOS**, press **Cmd + Space**, type **Terminal**, and press **Enter**. On **Linux**, press the **Super (Windows) key**, type **Terminal**, and press **Enter**. Copy any command below, paste it into the window, and press **Enter**.
->
-> | What you want to install | Platform | Exact command or click-by-click steps |
-> |---|---|---|
-> | **1. Everything on your computer at once** (`vibey` engine + `krypton` browser launcher) | macOS & Linux | `curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh \| sh -s -- --with-krypton` |
-> | **2. Your existing AI chat / IDE (`vibey connect` MCP driver)** | Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI | Run `vibey connect --yes` in Terminal. Then open your AI chat and ask: *"What vibey projects and gates are open?"* |
-> | **3. krypton browser launcher (`krypton-app`)** | macOS & Linux | Run `uv tool install krypton-app` (or `pip install krypton-app`), then type `krypton` and press Enter — it starts the local hub and opens it in your browser. |
-> | **4. krypton desktop app (native chat-first app)** | **macOS 15+ (Apple silicon)** | 1. Download `krypton-desktop-<version>-macos-arm64.dmg` from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (or [krypton-nightly](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly)).<br>2. Double-click the `.dmg` and drag **krypton** to **Applications**.<br>3. Run `xattr -dr com.apple.quarantine /Applications/krypton.app` in Terminal (or open it once and click **Open Anyway** in **System Settings → Privacy & Security**). |
-> | **4. krypton desktop app (native chat-first app)** | **Linux (any distro: Ubuntu, Fedora, Arch — Flatpak)** | Download `krypton-desktop-<version>-linux-x86_64.flatpak` (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) and run:<br>`flatpak install --user krypton-desktop-<version>-linux-x86_64.flatpak`<br>Launch with: `flatpak run io.github.the_vibey_project.krypton` |
-> | **4. krypton desktop app (native chat-first app)** | **Linux (Ubuntu 24.04+ native tarball)** | Download `krypton-desktop-<version>-linux-x86_64.tar.gz` (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) and run:<br>`sudo apt update && sudo apt install -y libgtk-4-1 libadwaita-1-0 libsoup-3.0-0 libjson-glib-1.0-0 libavahi-client3 libavahi-glib1 glib-networking`<br>`sudo tar -xzf krypton-desktop-<version>-linux-x86_64.tar.gz -C /`<br>Launch with: `krypton-desktop` |
-> | **5. krypton for VS Code / VSCodium / Cursor** | macOS & Linux | **VSCodium / Open VSX editors:** `codium --install-extension the-vibey-project.krypton`<br>**VS Code / Cursor:** Download `krypton-vscode-<version>.vsix` from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) and run `code --install-extension krypton-vscode-<version>.vsix` (or in VS Code click **Extensions → `…` → Install from VSIX…**). |
-> | **6. krypton web app (browser UI)** | Any browser (macOS, Linux, mobile) | Download `krypton-web-<version>.tar.gz` from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) and run:<br>`mkdir krypton-web && tar -xzf krypton-web-<version>.tar.gz -C krypton-web && python3 -m http.server -d krypton-web`<br>Then open `http://localhost:8000` in your browser. |
-> | **7. krypton mobile app (Android & iOS)** | **Android & iOS** | **Android:** Download `krypton-android-<version>.apk` from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) on your phone and tap it to install (or from a computer: `adb install krypton-android-<version>.apk`).<br>**iOS:** Installed via TestFlight / App Store from the signed `krypton-ios-<version>.ipa`, or run live in Expo Go during development (`cd clients/app && npm ci && npx expo start`). |
-> | **Uninstall any krypton app cleanly** | macOS & Linux | `curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/uninstall-krypton.sh \| sh -s -- --yes` (removes krypton interfaces; never touches `vibey-engine`). |
->
-> For complete beginner-friendly walkthroughs of every platform, see [Install, copy, reinstall, uninstall](docs/guides/install.md) and [Downloads](docs/guides/downloads.md).
+The one-command install is the first block at the top of this page. Every interface, what each
+one needs, and how to install it by hand, platform by platform, is in
+[the install guide](docs/guides/install.md); the files each release carries, what each runs on
+and whether it is signed are on [the downloads page](docs/guides/downloads.md).
 
-Requires **Python 3.12+** and **PostgreSQL 14+**. Windows is not a supported
-target. vibey supports every currently supported PostgreSQL major (14–18),
-and CI runs the database suite against each one. Every database-backed command
-reads the connection string from `VIBEY_PG_URL`; vibey never guesses a
-database and exits with `VIBEY_PG_URL is not set` when it is missing.
+| What you want | How |
+|---|---|
+| vibey, set up for a first project | The `--full` command at the top of this page. Add `--with-krypton` for the `krypton` browser launcher. |
+| Your AI chat or editor driving vibey | `vibey connect --client claude_code --yes` in the folder you work in ([Drive vibey from another LLM](#drive-vibey-from-another-llm)). |
+| krypton desktop, krypton for VS Code, the phone and web apps | From [GitHub Releases](https://github.com/the-vibey-project/vibey/releases); see [the krypton apps, platform by platform](docs/guides/install.md#the-krypton-apps-platform-by-platform). |
+| Remove the krypton apps | `curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/uninstall-krypton.sh \| sh -s -- --yes` (it never touches `vibey-engine`). |
 
-Memory, disk, GPU, network and each krypton client's needs are on the
-[system requirements](docs/reference/system-requirements.md) page. Those figures are
-re-measured every week, and any figure that could not be re-measured is marked stale.
-For the sovereign default (a local model), memory is the binding constraint.
+**What you need.** macOS or Linux (Windows is not supported) and **PostgreSQL 14 or newer**; the
+install script fetches `uv` and Python 3.12 itself. Every database-backed command reads its
+connection string from `VIBEY_PG_URL` and never guesses one. Memory, disk, GPU, network and each
+krypton client's needs are on the [system requirements](docs/reference/system-requirements.md)
+page, re-measured every week; for a local model, memory is the binding constraint.
 
-Prefer a ready-built file? Every release on GitHub also carries the user interfaces built
-for each supported platform: krypton desktop for Linux (a Flatpak bundle and an Ubuntu
-build, x86_64 and arm64) and, from 3.4.0, for macOS on Apple silicon (a self-contained
-`.dmg`), the krypton app for Android, the web and, from 3.4.0, iOS (signed for TestFlight
-and the App Store), krypton for VS Code (also on Open VSX), and the Python wheels below,
-with checksums and build provenance. The
-[downloads page](docs/guides/downloads.md) lists each file, what it runs on and whether it is signed.
+**One install is the whole family.** The `vibey-engine` package puts `vibey`, the four runner
+commands and the family's tools on your `PATH` together
+([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md)); the apps ship separately as
+`krypton-app` ([ADR-0069](docs/architecture/decisions/0069-two-packages-vibey-engine-and-krypton-app.md)).
+Each paid engine still needs its own vendor CLI and credentials, which `vibey doctor` checks.
 
-One install is the whole family: `vibey`, all six `*loop` engine commands, and the
-tools (`vibey-gh`, `vibey-skills`, `vibey-bootstrap`) ship in the one `vibey-engine`
-distribution and land on `PATH` together (ADR-0037). What each engine still
-needs separately is its own vendor CLI and credentials — which is what
-`vibey doctor` checks.
+### Set it up by hand
+
+Use this path if you did not run `--full`, or if one of its steps failed. Each command is safe
+to run again; [the manual path](docs/guides/install.md#without-full-the-manual-path) explains
+each one, and [database roles](docs/reference/configuration.md#database-roles) covers bringing
+your own PostgreSQL with its two connection strings.
 
 ```bash
-uv tool install vibey-engine          # or: pipx install vibey-engine / pip install vibey-engine
-vibey install --postgres       # install/start local PostgreSQL 18 when needed, then set
-                               # the scram-sha-256 pg_hba.conf lines in SECURITY.md §7
-export VIBEY_PG_URL=postgresql://vibey_app:change-me@localhost:5432/vibey # the application
-# The owner's DSN is given to `vibey migrate` alone, for that one command -- never exported,
-# so no worker, engine session or gate command ever holds it:
-VIBEY_PG_MIGRATE_URL=postgresql://user@localhost:5432/vibey vibey migrate
-vibey doctor                   # pre-flight: engines, and whether the ledger is guarded
+uv tool install 'vibey-engine[hub]'   # vibey, with the hub that vibey serve, vibey hub and vibey mcp need
+vibey install --postgres              # install and start PostgreSQL (Homebrew, apt or dnf)
+vibey install --database              # the database, its two roles and the migrations
+vibey install --model                 # pull the local model into Ollama (about 12 GB)
+vibey connect --client claude_code --yes   # optional: connect your chat or editor
+vibey doctor                          # what is still missing
 ```
 
-Two DSNs, because the ledger is append-only by the database
-([ADR-0055](docs/architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)):
-the application connects as a role that can read and append to the ledger and nothing
-more. One DSN still works, but `vibey doctor` fails its `ledger-guard` check until the
-roles are split ([database roles](docs/reference/configuration.md#database-roles)).
+Either way, require `scram-sha-256` for every connection in `pg_hba.conf`
+([`SECURITY.md`](SECURITY.md), section 7); `vibey doctor` says so until you do.
 
-`vibey install --postgres` uses Homebrew, apt, or dnf to install and start the
-current stable PostgreSQL major. `vibey doctor` reports local PostgreSQL
-readiness as well as engine health; `vibey doctor --install-postgres` performs
-the same explicit installation before checking. `--record` also writes engine
-results to the database for a project, and `--cluster` runs the in-cluster
-preflight (DSN, workspace, secrets, database, migrations) instead.
+<!-- remove-after-release:start -->
+**Until the next release**, `vibey install --database` and `vibey install --model` do not exist
+yet (they come with pull request #1978): follow the
+[manual path](docs/guides/install.md#without-full-the-manual-path), which gives the commands to
+use until then.
+<!-- remove-after-release:end -->
 
-`gptossloop` and `qwenloop` install with everything else; what is opt-in is the
-*feature*, not the install. Each local engine has a switch: `gptossloop` — the
-sovereign default on GPT-OSS 20B — is on unless `VIBEY_FEATURE_GPTOSSLOOP=0`;
-`qwenloop` — the same runner on `qwen3:14b` — needs `VIBEY_FEATURE_QWENLOOP=1`;
-and `claudeloop-local` (claudeloop on a local backend profile) needs
-`VIBEY_FEATURE_CLAUDELOOP_LOCAL=1` (ADR-0064). A switched-on local engine is
-**preferred first** for BUILD — a paid engine runs only when no local one is
-eligible — and `vibey doctor` lists it; `vibey doctor` also honours
-`[features] gptossloop = false` / `qwenloop = true` / `claudeloop_local = true`
-in a `./vibey.toml`. With no `--provider`, `vibey work` and `vibey worker` run
-DESIGN and DECOMPOSE on the sovereign gptossloop providers too (ADR-0038).
-`VIBEY_OLLAMA_URL` is the one endpoint setting; the
-[local models guide](docs/guides/local-models-ollama.md) has the Ollama recipe.
+### Local engines, skills and plugins
 
-To add deterministic, budgeted context packets from the `vibey-skills`
-marketplace, enable it per project — `vibey-skills` ships in the same
-distribution, so there is nothing extra to install:
-
-```bash
-vibey new my-app --repo ~/src/my-app \
-  --skills-context-mode shadow --skills-context-budget 6000
-```
-
-`shadow` builds and records packet provenance without changing agent prompts.
-After observing results, switch the project config to `inject` to append successful
-packets to BUILD prompts. Missing tools, timeouts, low-confidence retrieval, and
-insufficient budgets all fall back to the original prompt. The feature is off by
-default, and wind-down prompts are never modified (ADR-0031).
+`gptossloop`, the sovereign default, is on unless `VIBEY_FEATURE_GPTOSSLOOP=0`; `qwenloop` and
+`claudeloop-local` are opt-in switches. A switched-on local engine is preferred first for BUILD,
+and a paid engine runs only when no local one is eligible:
+[switch the local engines on](docs/guides/local-models-ollama.md#4-switch-the-local-engines-on).
+`vibey new --skills-context-mode shadow` adds budgeted context packets from `vibey-skills`,
+which ships in the same package ([skills context](docs/reference/configuration.md#skills_context)).
 
 The same tree is a Claude Code plugin marketplace — every plugin in the family, the 153
-skills plugins and vibey-gh's four, from one address and nothing else:
+skills plugins and vibey-gh's four, from one address and nothing else
+([ADR-0034](docs/architecture/decisions/0034-one-marketplace-at-the-root.md)):
 
 ```text
 /plugin marketplace add the-vibey-project/vibey
@@ -278,120 +331,118 @@ skills plugins and vibey-gh's four, from one address and nothing else:
 /plugin                                    # browse all 157
 ```
 
-The root manifest is rendered from the workspace members by `vibey-gh marketplace` and
-held to them by `vibey-gh check` (ADR-0034); it is never edited by hand. Since the family
-ships as one distribution (ADR-0037) this root manifest is the only marketplace there is.
-
 ## Quickstart
 
-```bash
-export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey
-vibey connect --yes                          # plug vibey into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI over MCP
-vibey new my-app --repo ~/src/my-app \
-  --max-cycle-dollars 15                     # real budget brake, enforced from the ledger
-vibey doctor --conformance --record          # verify each engine's contract, persist health for the latest project
-vibey worker --provider claudeloop \
-  --engines claudeloop,codexloop -j 2        # live DESIGN provider; unattended build across the pool
+Your first project on the local engine, after the `--full` install (or after
+[Set it up by hand](#set-it-up-by-hand)). Nothing here spends money.
 
-# Drive everything from your chat/IDE session (via MCP or krypton chat), or from the CLI:
-vibey gates                                  # each open gate, its prompt, and the command that answers it
-vibey answer <gate-id> --defaults            # accept the interview defaults, or:
-vibey answer <gate-id> --raw '{"max_dollars": 25}'   # raise a tripped budget cap
-vibey design accept <project-id> --no-visual
-vibey answer <gate-id> --verdict accept      # review demo
-vibey answer <gate-id> --choice local_only   # decline deployment → DONE (local)
-```
+1. Open a new terminal, so the `export VIBEY_PG_URL=...` line you saved is read, and check:
 
-`vibey connect` registers `vibey mcp` with your frontier LLM and IDE clients so you can inspect status, answer non-spending gates, and start or pause work directly from chat (ADR-0100). `vibey doctor --record` needs a project to record against, so run it after
-`vibey new`. `vibey worker` defaults to `--provider gptossloop`, the sovereign
-DESIGN interview and BUILD decomposition on a local model; pass
-`--provider claudeloop` for the same on a paid engine, or `--provider scripted`
-for the test double. `--provider qwenloop` is still accepted and read as
-gptossloop (ADR-0064).
-`vibey gates` lists every open gate with its id, its prompt, and the exact
-`vibey answer` command that answers it (`vibey gates <project-id>` for one
-project); `vibey projects` lists your projects, their ids, and how many gates
-each is waiting on. Both take `--json`.
+   ```bash
+   vibey doctor
+   ```
 
-The [greeter live-demo runbook](docs/guides/greeter-live-demo.md) walks a full
-paid run end to end, including the zero-touch contracts.
+   You should see `gptossloop` installed, the model found, and PostgreSQL ready. Paid engines
+   show `auth FAIL` until you log in to them; that does not stop a local run.
+
+2. Make a folder for the project. BUILD takes a git worktree from it, so it must be a git
+   repository with at least one commit (if git says it does not know who you are, set
+   `git config --global user.name` and `user.email` first):
+
+   ```bash
+   mkdir -p ~/src/my-app && cd ~/src/my-app
+   git init -b main && git commit --allow-empty -m "chore: start my-app"
+   ```
+
+3. Create the project and its first design interview:
+
+   ```bash
+   vibey new my-app --repo ~/src/my-app --intake "A command-line greeter that prints Hello, NAME"
+   ```
+
+4. Record the local engine's conformance, so BUILD may pick it:
+
+   ```bash
+   vibey doctor --conformance --record --engine gptossloop
+   ```
+
+5. Start a worker. It runs DESIGN and the work plan on the local model, then BUILD on
+   `gptossloop`, and keeps going until something needs you:
+
+   ```bash
+   vibey worker
+   ```
+
+6. In a second terminal, answer what waits on you. `vibey gates` prints each open gate's id,
+   its prompt, and the exact command that answers it:
+
+   ```bash
+   vibey gates
+   vibey answer <gate-id> --defaults            # the design interview: accept every default
+   vibey design accept <project-id>             # accept the spec; add --visual for a visual-design stage
+   vibey answer <gate-id> --verdict accept      # the review
+   vibey answer <gate-id> --choice local_only   # stay local: the project is DONE without deploying
+   ```
+
+   `<gate-id>` and `<project-id>` are the ids `vibey gates` and `vibey projects` print.
+
+Further on: DESIGN [research](docs/guides/local-models-ollama.md#research) searches the web
+through a local SearXNG first; `vibey new --max-cycle-dollars 15` and `--max-cycle-turns`
+[cap what a cycle spends](docs/guides/outcomes/cap-agent-spending.md);
+`vibey worker --provider claudeloop --engines claudeloop,codexloop -j 2` adds the paid engines;
+`vibey worker --autonomous` [answers the gates that are safe to answer](docs/guides/local-models-ollama.md#running-unattended),
+never a spending or deployment gate; and `vibey watch` and `vibey llm tail` show the work as it
+happens. The [greeter live-demo runbook](docs/guides/greeter-live-demo.md) walks a full paid run
+end to end, including the zero-touch contracts.
+
+## Drive vibey from another LLM
+
+The second block at the top of this page is the short form. Claude Code, Claude Desktop, Codex,
+Cursor, VS Code and Gemini CLI reach vibey over MCP (`vibey mcp`), and Zed and other Agent Client
+Protocol editors over `vibey acp` ([ADR-0100](docs/architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces.md),
+[ADR-0101](docs/architecture/decisions/0101-the-acp-agent-and-self-installing-services.md)). Every call goes through the hub as a
+scoped `agent` principal that may view, answer and run, but never spend: the budget and
+deployment gates stay yours. [Drive vibey from another LLM](docs/guides/drive-from-an-llm.md)
+covers every client, the 16 tools, the plugin route, and what is refused and why
+([`SECURITY.md`](SECURITY.md), sections 10 to 13).
 
 ## Command reference
 
-Every command's flags and defaults are in the
-[CLI reference](docs/reference/cli.md). The most common ones:
-
-| Command | What it does |
-|---|---|
-| `vibey connect` | Register `vibey mcp` in Claude Code, Claude Desktop, Codex, Cursor, VS Code and Gemini CLI (`--dry-run`, `--yes`, `--client`, `--list`; ADR-0100). |
-| `vibey mcp` | Run the stdio Model Context Protocol (MCP) server as the scoped `agent` principal over the hub API (ADR-0100). |
-| `vibey doctor` | Pre-flight: engine install state, versions, auth; `--conformance` runs the 9-check suite, `--record` persists health, `--cluster` runs the in-cluster preflight. |
-| `vibey new` | Create a project and enqueue its first DESIGN interview. |
-| `vibey worker` | Long-running worker: dispatches jobs across every phase (`--provider scripted\|claudeloop\|gptossloop`, `--engines`, `-j`, `--azure memory\|az`). |
-| `vibey work` | Process one ready DESIGN or VISUAL_DESIGN job for a project (foreground, capped). |
-| `vibey answer` | Answer a parked human gate. |
-| `vibey design resume/accept` / `vibey visual accept/waive` | Resume or accept DESIGN; accept or waive VISUAL_DESIGN. |
-| `vibey watch` / `vibey status` | Live dashboard, or one-shot status (`--json` for scripting). |
-| `vibey engines` / `vibey cost` / `vibey ledger show` | Engine health, budget spend, and event-ledger inspection. |
-| `vibey budget` / `budget set` / `budget clear` | A project's per-cycle caps and spend, and changing the caps after creation (`--json` for scripting). |
-| `vibey deploy status/inspect/plan/cancel/rollback` | Inspect and control Phases ④–⑥. |
-| `vibey recover` | Recover jobs stuck under a dead worker's lease. |
-| `vibey operator` | Run the Kubernetes operator (`pip install 'vibey-engine[operator]'`; ADR-0025). |
+Every command, subcommand, flag and default is in the [CLI reference](docs/reference/cli.md), and
+`vibey explain <code>` explains any error code. The ones you meet first: `vibey doctor` (what is
+missing), `vibey new` (start a project), `vibey worker` (do the work), `vibey gates` and
+`vibey answer` (what waits on you, and your answer to it), `vibey projects`, `vibey status` and
+`vibey watch` (where things stand), and `vibey hub start` (the hub every krypton app and connected
+LLM reaches). `vibey -v` prints the versions; verbose output is `-d`.
 
 ## Configuration
 
-`vibey.toml`'s schema — `[project]`, `[isolation]`, `[budget]`, `[engines]` (with
-`[engines.claudeloop_local]`), `[phases.design/build/review]`, `[provision]`,
-`[deploy]`, `[notifications]`, `[telemetry]`, `[features]`, `[qwenloop]`,
-`[queue.priority]`, `[queue.reap]`, and the operational surfaces `[tracker]`,
-`[docs]`, `[secrets]`, `[files]`, `[email]`, `[sms]`, `[messaging]`,
-`[config_store]`, `[cache]`, `[bus]`, `[blob]` and `[siem]` — is implemented and
-unit-tested in `domain/config.py` (`parse_config`) and
-`infrastructure/config_loader.py`. `[verify]`, `[gates]`, `[engine_environment]`,
-`[failover]`, `[hub]` and `[sabbath]` are read by their own loaders. Defaults and an
-example file are in the [configuration reference](docs/reference/configuration.md).
-The local-engine keys are read at runtime today: `[features] gptossloop`,
-`[features] qwenloop`, `[features] claudeloop_local` and
-`[engines.claudeloop_local]`. `vibey doctor` and `vibey loops`
-read them from `./vibey.toml` in the current directory, and the worker reads the
-same keys from the project's stored config (which no CLI flag sets yet);
-`VIBEY_FEATURE_GPTOSSLOOP`, `VIBEY_FEATURE_QWENLOOP`,
-`VIBEY_FEATURE_CLAUDELOOP_LOCAL` and
-`VIBEY_CLAUDELOOP_LOCAL_PROFILE` override them. `[notifications]`,
-`[telemetry]`, `[gates]` and `[engine_environment]` are copied from the
-repository's `vibey.toml` into the stored project config by `vibey new`; the
-worker and lifecycle repository then use those settings. Telemetry is an in-process recorder for now, so it is available
-to the running app but has no external exporter yet.
-
-What does configure a project today is a handful of `vibey new` CLI flags
-(`--max-cycles`, `--max-cycle-dollars`, `--max-cycle-turns`,
-`--skills-context-mode`, `--skills-context-budget`) recorded directly into
-that project's stored config at creation time — see the
-[CLI reference](docs/reference/cli.md). The two caps can be changed after that:
-`vibey budget set` and `vibey budget clear` rewrite them in the stored config,
-record each change on the ledger, and bind the next BUILD session of a worker
-already running.
+`vibey.toml` is optional: with none, every default applies. vibey reads it from three places and
+never merges them: your own file in your configuration folder, which holds the powers (`[hub]`,
+`[web]`, `[loops]`, `[inputs]`, `[acp]`); this folder's `./vibey.toml`; and the project's own. A
+file that is not your own may only narrow what yours grants. Not every table does something yet,
+so before you set a key, find its table in
+[Where each table is read](docs/reference/configuration.md#what-is-read-at-runtime-today). One
+trap: the local-engine switches reach the worker only as the `VIBEY_FEATURE_*` environment
+variables ([why](docs/reference/configuration.md#the-local-engine-switches-and-the-worker)). The
+full schema, with defaults and an example file, is the
+[configuration reference](docs/reference/configuration.md).
 
 ## Notifications
 
-`infrastructure/notify/` implements a `NotificationService` that dispatches
-desktop alerts and HMAC-SHA256-signed webhooks (`X-Vibey-Signature`, see
-[SECURITY.md](SECURITY.md#6-webhook-payload-integrity--implemented-unit-tested-and-active-when-configured)), and it is covered
-by tests. `build_app()` constructs it; workers notify on newly raised gates,
-and project transitions notify on phase changes and completion. Enable it in
-the repository TOML with `[notifications] enabled = true`; `vibey new` stores
-that table with the project.
+vibey can tell you when a gate opens and when a project changes phase, by desktop alert or by an
+HMAC-SHA256-signed webhook (`X-Vibey-Signature`, see
+[SECURITY.md](SECURITY.md#6-webhook-payload-integrity--implemented-unit-tested-and-active-when-configured)).
+It is off by default: set `[notifications] enabled = true` in the repository's `vibey.toml`, and
+`vibey new` stores that table with the project. Whether anyone was told is recorded on the ledger;
+the keys and the reminders are in [`[notifications]`](docs/reference/configuration.md#notifications).
 
 ## Telemetry
 
-`infrastructure/otel.py` implements `TelemetryTracer` (span tracing for
-jobs, turns, and handoffs) and `TelemetryMetrics` (engine-selection,
-queue-latency, phase-duration, handoff-failure, and cost-spend counters),
-plus `calculate_rotation_fairness()` for measuring rotation fairness against
-declared engine weights. It is covered by unit tests and constructed by
-`build_app()`. The worker records queue latency, phase duration, and job spans;
-BUILD records engine turns, selections, handoffs, and cost spend. Set
-`[telemetry] enabled = false` to disable those runtime calls for a project.
+Workers record job spans, queue latency, phase duration, engine selections and turns, handoff
+failures and cost spend in an in-process recorder; there is no external exporter yet.
+`[telemetry] enabled = false` turns it off for a project
+([`[telemetry]`](docs/reference/configuration.md#telemetry)).
 
 ## The shape of it
 
@@ -454,8 +505,9 @@ defect back to the appropriate delivery phase.
    one git worktree per work item ──► your repository
 ```
 
-The same picture in words: you talk to vibey through its command line or the krypton
-apps. The conductor runs the six phases, parks a job whenever it needs your answer, and
+The same picture in words: you talk to vibey through its command line, the krypton
+apps, or another LLM connected over MCP or ACP. The conductor runs the six phases, parks a job
+whenever it needs your answer, and
 enforces your budget. Workers claim jobs from a PostgreSQL queue under leases that expire
 if a worker dies. Every decision, question, answer and handoff is appended to a ledger
 in the same database before it takes effect, and the database refuses to change or
@@ -505,9 +557,9 @@ through the design, the chaos test behind it, and what it costs.
 
 ### Can vibey run without sending code to a cloud model?
 
-Yes. The default engine, `gptossloop`, runs GPT-OSS 20B on your own machine through
-[Ollama](docs/guides/local-models-ollama.md), and with no `--provider`, the design
-interview and the work plan run on local models too. To keep every job on your machine,
+Yes. The default engine, `gptossloop`, runs the Heretic v2 build of GPT-OSS 20B on your own
+machine through [Ollama](docs/guides/local-models-ollama.md), and with no `--provider`, the
+design interview and the work plan run on local models too. To keep every job on your machine,
 allow only the local engine:
 
 ```bash
@@ -517,6 +569,11 @@ vibey worker --provider gptossloop --engines gptossloop
 With that allow-list the only models vibey calls are the ones running on your machine
 ([ADR-0038](docs/architecture/decisions/0038-local-engines-are-preferred-first.md),
 [ADR-0064](docs/architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)).
+That is not the same as no network: DESIGN research searches the web, through a local SearXNG
+first and Brave only as a backup when a key is set, and records each search on the ledger
+([ADR-0102](docs/architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md)).
+`vibey doctor` with no `--engine` also checks the bundled Claude CLI, which may try to reach its
+vendor; `vibey doctor --engine gptossloop` checks only the local engine.
 
 ### How does vibey keep an audit trail?
 
@@ -541,14 +598,17 @@ gaps ([ADR-0004](docs/architecture/decisions/0004-no-loss-gate-on-handoff.md)).
 No — it drives them. Each engine is a `*loop` runner around a vendor's own tool or a
 local model ([ADR-0001](docs/architecture/decisions/0001-orchestrate-do-not-reimplement.md)).
 vibey adds what a single session cannot do: a durable queue, a shared ledger, human
-gates, budget caps, and rotation between engines.
+gates, budget caps, and rotation between engines. Replacing them is the project's stated
+mission, not something vibey does today. The reverse also works: Claude Code, Codex and other
+clients can drive vibey ([Drive vibey from another LLM](#drive-vibey-from-another-llm)).
 
 ### Where does a person stay in control?
 
 At four gates: the design interview, the review, and the design and review of a
 deployment. Each one waits for your recorded answer, and `vibey gates` lists every gate
 that is open. Budgets cap the dollars and turns each cycle may spend, and a tripped cap
-parks with the exact command that grants more. Nothing is deployed unless you opt in.
+parks with the exact command that grants more. Nothing is deployed unless you opt in. An LLM
+connected to vibey is refused the gates that spend money: those stay yours.
 
 ### How do I start contributing?
 
@@ -561,12 +621,17 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 
 | Document | What's in it |
 |---|---|
+| [Install guide](docs/guides/install.md) | Install, reinstall, copy the codebase and remove the krypton interfaces, platform by platform |
+| [Drive vibey from another LLM](docs/guides/drive-from-an-llm.md) | Claude Code and the other MCP and ACP clients as vibey's driver: setup, the tools, and what they are refused |
 | [Architecture map](docs/project.mmd) | Comprehensive Mermaid diagram: every layer, the six phases, the ledger/handoff data flow, the security boundary, and the release channels |
 | [Research paper](https://the-vibey-project.github.io/vibey/main/paper/) · [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf) | *Ledger-Mediated Orchestration: Vendor-Independent Autonomous Software Delivery over a Pool of Coding Agents* — the ledger invariant and what the database enforces, the no-loss handoff gate, the capacity taxonomy, the exact-head release calculus with its production counterexample, and a single-slot saturation curve measured on one machine, with what the records do not show: the family's one paper |
 | [The book](https://the-vibey-project.github.io/vibey/main/book.pdf) · [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) · [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html) | Every page of the documentation site, in reading order, as one downloadable book |
 | [What do you want to do?](docs/guides/outcomes/index.md) | Six outcome guides — local-only agents, spending caps, a tamper-evident record, review before merge, deployment without stored cloud secrets, regulated environments — each with commands, evidence and limits |
+| [Local models on Ollama](docs/guides/local-models-ollama.md) | The local engines, the two sovereign model builds, research, and running unattended |
 | [CLI reference](docs/reference/cli.md) | Every command, subcommand, flag, and default |
 | [Configuration reference](docs/reference/configuration.md) | The full `vibey.toml` schema, with defaults and an example file |
+| [Hub API](docs/reference/hub-api.md) | The HTTP API every krypton client and agent reaches |
+| [Error codes](docs/reference/errors.md) | Every error code, its cause and what to do; `vibey explain <code>` prints the same |
 | [System requirements](docs/reference/system-requirements.md) | Hardware, software, network and per-client requirements, re-measured weekly, with what is measured, derived or stale |
 | [How far vibey is from full autonomy](docs/reference/autonomy.md) | The delivery loop's stages, each measured weekly from the forge, the review canary, the code and the local queue, with what would close each gap |
 | [Host health](docs/reference/host-health.md) | The machine vibey runs on, measured weekly on the host itself (SSD, battery, memory and swap, thermals, generation rate), with a forecast of when it needs replacing |
@@ -577,10 +642,10 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 | [Kubernetes guide](docs/guides/kubernetes.md) | Container, Helm chart, KEDA autoscaling, and its own troubleshooting section |
 | [Greeter live-demo runbook](docs/guides/greeter-live-demo.md) | A full paid run, end to end, with the zero-touch contracts |
 | [What gets published](docs/guides/ledger-publication.md) | What `vibey ledger export` publishes of a ledger, what it withholds, and how it counts both |
-| [Expansion runbooks](docs/runbooks/expansion/) | 21 workstreams: JIRA, more clouds, Kubernetes server mode, clients, store submissions, … |
-| [Architecture & roadmap](docs/plans/architecture-and-roadmap.md) | The master design: context, containers, layers, phases, risks, milestones |
-| [Domain model](docs/plans/domain-model.md) | Every value object, ADT, and invariant in `domain/` |
-| [Data model](docs/plans/data-model.md) | Full PostgreSQL DDL, queue semantics, indices |
+| [Expansion runbooks](docs/runbooks/expansion/) | A master plan and 21 workstreams: JIRA, more clouds, Kubernetes server mode, clients, store submissions, … |
+| [Architecture & roadmap](docs/plans/architecture-and-roadmap.md) | The master design: context, containers, layers, phases, risks, milestones. Planning notes, kept off the site because parts have drifted from the code |
+| [Domain model](docs/plans/domain-model.md) | Every value object, ADT, and invariant in `domain/` (planning notes; check against the code) |
+| [Data model](docs/plans/data-model.md) | Full PostgreSQL DDL, queue semantics, indices (planning notes; check against the code) |
 | [Handoff protocol](docs/plans/handoff-protocol.md) | The event ledger, the envelope, and the no-loss gate |
 | [Rotation & engines](docs/plans/rotation-and-engines.md) | Capability matrix, effort normalization, smooth weighted round robin |
 | [Phase protocols](docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
@@ -590,17 +655,25 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 
 ## Status
 
+**Work in progress.** vibey is in active development at version 0.4.0, held below 1.0:
+features, interfaces and APIs still change. The finished product will be announced on the
+[Discord server](https://discord.gg/Qvu8aYnVS).
+
 <!-- BEGIN GENERATED autonomy:summary — regenerated by scripts/autonomy_scorecard.py -->
 **Distance from full autonomy: 0 of 11 stages autonomous (2 partial, 5 manual, 4 unknown)**, measured at 2026-10-22 12:56Z from the forge, the review canary, the code and the local queue. Not yet autonomous: DESIGN resolves without a person (unknown), BUILD runs unattended (unknown), Paid engines stay available (unknown), REVIEW resolves without a person (partial), The pull-request review reaches a verdict (manual), The review's verdict is trustworthy (manual), Approval comes from the delegated approver (manual), Merges land without the operator (manual), Promotion and release run without hand steps (manual), CI stays green without human re-runs (partial), The queue delivers projects to DONE (unknown). Each stage's metric, threshold, evidence and what would close it are on [How far vibey is from full autonomy](docs/reference/autonomy.md); the record is [`docs/architecture/evidence/autonomy-scorecard.jsonl`](https://github.com/the-vibey-project/vibey/blob/develop/docs/architecture/evidence/autonomy-scorecard.jsonl). *Regenerated by `scripts/autonomy_scorecard.py`; do not edit inside these markers.*
 <!-- END GENERATED autonomy:summary -->
 
-**Live-validated.** The full pipeline has conducted real paid deliveries end to
-end: multi-worker builds (`-j 2`) with cross-engine rotation (claudeloop
-implements, agyloop — since retired by ADR-0078 — verifies), the bounded verify-repair ladder, budget caps
-tripping and being granted live, and fully zero-touch DESIGN phases answered
-with nothing but `--defaults`. The validation campaign's findings — a blind
-budget brake, a repair-loop livelock, terminal gate-command failures — were
-each fixed and re-validated live.
+The scorecard is scheduled weekly, but its record holds five measurements and the newest is
+from 2026-10-22, so read the figures above as of that date.
+
+**Live-validated, on an earlier engine pool.** The full pipeline has conducted real paid
+deliveries end to end ([the greeter runbook](docs/guides/greeter-live-demo.md)): multi-worker
+builds (`-j 2`) with cross-engine rotation (claudeloop implemented and agyloop verified;
+agyloop has since been retired by ADR-0078), the bounded verify-repair ladder, budget caps
+tripping and being granted live, and fully zero-touch DESIGN phases answered with nothing but
+`--defaults`. The validation campaign's findings — a blind budget brake, a repair-loop livelock,
+terminal gate-command failures — were each fixed and re-validated live. The same validation has
+not been recorded on today's engine pool.
 
 Every architectural layer (`domain`, `application`, `infrastructure`, `cli`)
 holds a **100% branch-coverage floor**, enforced as four separate CI gates
@@ -610,39 +683,31 @@ test — the no-loss handoff gate is deterministic code, not a model's opinion.
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| `vibey doctor` reports an engine `NOT INSTALLED` | The `*loop` binaries ship with `vibey`, so this is a `PATH` problem, not a missing package: `vibey` is being run from one environment while `PATH` points at another (a venv whose `bin/` is not exported, a shadowing `uv tool` shim, a system `python` install). | `python -c 'import shutil; print(shutil.which("claudeloop"))'` in the same environment that runs `vibey`; if it prints nothing, put that environment's `bin/` on `PATH` (or reinstall with `uv tool install vibey-engine`), then re-run `vibey doctor`. |
-| `VIBEY_PG_URL is not set` | No database connection string in the environment. | `export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey`, pointing at a database you own. |
-| `vibey doctor` reports `auth FAIL` | The engine's own vendor credentials aren't configured. | Run that engine's own login/auth flow, then re-run `vibey doctor --conformance`. |
-| `vibey worker` logs `no recorded conformance for ...` | `vibey doctor --conformance --record` has never passed for that engine on this project. | Run it before starting the worker; engine-driven jobs won't select an unrecorded engine. |
-| A project is parked and nothing progresses | A human gate (interview, review verdict, budget cap) is waiting. | `vibey gates` (or `vibey gates <project-id>`) prints each open gate's id, its prompt, and the exact `vibey answer` command that answers it. Run that command, putting your value where it shows `N` or `<json>`. |
-| Jobs sit `leased` after a worker crash | The lease hasn't expired yet, or nothing has reclaimed it. | `vibey recover --project <id>` (or `--all`) sets them back to `ready`. |
-| Budget cap trips mid-cycle | The project's `max_cycle_dollars` / `max_cycle_turns` cap (set by `vibey new --max-cycle-dollars` / `--max-cycle-turns`) was exceeded — by design. | `vibey answer <gate-id> --raw '{"max_dollars": 25}'` (or `{"max_turns": N}`) to grant more, or accept the park. |
-| Kubernetes-specific issues | — | See the [Kubernetes guide's Troubleshooting section](docs/guides/kubernetes.md#troubleshooting). |
+Most problems are one of three kinds, and each has its own table of symptoms and fixes:
+
+- **Installing, and what `vibey doctor` says**: `vibey: command not found`, an engine
+  `NOT INSTALLED`, `VIBEY_PG_URL is not set`, a `ledger-guard` failure, a missing `fastapi`.
+  See [the install guide](docs/guides/install.md#when-it-goes-wrong) and
+  [reading `vibey doctor`](docs/guides/install.md#read-what-vibey-doctor-says).
+- **A project that does not move**: a waiting gate, an engine with no recorded conformance, jobs
+  left `leased` after a crash, a tripped budget cap. See
+  [Drive a project](docs/guides/drive-a-project.md#when-it-goes-wrong); `vibey gates` prints every
+  open gate with the command that answers it.
+- **The local model**: a model that is not served, a `research_evidence` gate, a job that ran on a
+  paid engine. See [Local models on Ollama](docs/guides/local-models-ollama.md#when-it-goes-wrong).
+
+`vibey explain E0040` explains an error code such as `E0040`
+([error codes](docs/reference/errors.md)); Kubernetes has
+[its own troubleshooting section](docs/guides/kubernetes.md#troubleshooting).
 
 ## Upgrading
 
-From 1.0.0 vibey follows semantic versioning: a change that breaks
-`vibey.toml` fields, ledger event shapes, or CLI flags takes a major version.
-Before upgrading:
-
-1. Read [CHANGELOG.md](CHANGELOG.md) for the versions between your current
-   version and the target.
-2. Re-run `vibey doctor --conformance --record` afterward — engine
-   contracts and conformance checks can gain new checks between releases.
-3. The database schema migrates automatically
-   (`infrastructure/db/migrator.py`); no manual migration step is needed.
-
-Every push to `develop` publishes a uniquely versioned dev build (`X.Y.Z.devN`)
-to TestPyPI; every push to `main` publishes to PyPI. Two packages publish, each by its own
-workflow (ADR-0069): `vibey-engine`, the engine family (`vibey-engine.yml`), and
-`krypton-app`, the apps and the `krypton` command (`krypton-app.yml`).
-After a successful `main` release, `github-release.yml` tags that exact commit
-and creates the matching GitHub Release. Versioning and release are owned by
-the in-tree `vibey-gh`; release-please is retired (ADR-0028). `uv tool install
-vibey-engine` (or `pipx install vibey-engine` / `pip install vibey-engine`) tracks stable
-releases of the engine family (ADR-0037, ADR-0069); `pip install krypton-app` adds the apps.
+vibey is at **0.4.0** and stays below 1.0 for now (`[version] max_major = 0` in
+`.vibey-gh.toml`), so a breaking change takes a minor version: read the
+[changelog](CHANGELOG.md) before every upgrade. To upgrade, run the install command again.
+[Reinstall or upgrade](docs/guides/install.md#reinstall-or-upgrade) says what else to know: the
+numbers restarted at 0.3.0 after 4.6.0, `vibey -v` now prints the versions, and a two-role install
+runs `vibey migrate` itself and then `vibey doctor --conformance --record`.
 
 ## Formal notes
 
@@ -690,7 +755,7 @@ critiques, pull requests and wild ideas are all welcome.
 These packages live in this repository as uv workspace members
 (`src/vibey_runners/*`, `src/vibey_tools/*`; ADR-0021). Each keeps its own
 `pyproject.toml`, version, Python floor, tests and gates — but none is
-published separately any more: all nine ship inside the one `vibey-engine`
+published separately any more: all seven ship inside the one `vibey-engine`
 distribution (ADR-0037), and their former standalone GitHub repositories and
 PyPI projects no longer exist.
 
@@ -698,7 +763,8 @@ PyPI projects no longer exist.
 |---|---|---|
 | claudeloop | [`src/vibey_runners/claude`](src/vibey_runners/claude) | Autonomous Claude Code session runner — the design the family transplants |
 | codexloop | [`src/vibey_runners/codex`](src/vibey_runners/codex) | The same design retargeted onto OpenAI Codex |
-| gptossloop, qwenloop | [`src/vibey_runners/qwen`](src/vibey_runners/qwen) | The same design on a local model, as two engines over Ollama, llama.cpp or vLLM: `gptossloop` on GPT-OSS 20B — the sovereign default, on by default, and the sovereign DESIGN provider — and the opt-in `qwenloop` on Qwen (`qwen3:14b`); both preferred first when switched on (ADR-0064) |
+| qwenloop (the `gptossloop` and `qwenloop` commands) | [`src/vibey_runners/qwen`](src/vibey_runners/qwen) | The same design on a local model, as two engines over Ollama, llama.cpp or vLLM: `gptossloop` on the Heretic v2 build of GPT-OSS 20B — the sovereign default, on by default, and the sovereign DESIGN provider — and the opt-in `qwenloop` on Qwen (`qwen3:14b`); both preferred first when switched on (ADR-0064, ADR-0099) |
+| vibey-runners-common | [`src/vibey_runners/common`](src/vibey_runners/common) | The code the runners share |
 | vibey-skills | [`src/vibey_tools/skills`](src/vibey_tools/skills) | The Agent Skills marketplace (a Claude Code plugin marketplace) and its context packets |
 | vibey-gh | [`src/vibey_tools/gh`](src/vibey_tools/gh) | Provenance fingerprints, derived version bumps, a merge train, and branch realignment; it owns vibey's own release (ADR-0028) |
 | vibey-bootstrap | [`src/vibey_tools/bootstrap`](src/vibey_tools/bootstrap) | Azure bootstrap library for App Configuration, Key Vault, and App Insights integration |
@@ -707,17 +773,12 @@ PyPI projects no longer exist.
 
 [MIT](LICENSE) © [Adam Matthew Steinberger](https://github.com/adammatthewsteinberger)
 
----
+## Say it in one line
 
-**The short version, again**: agents can code, but delivery still meant
-babysitting them — vibey is the layer that does the babysitting, from sharp
-spec to deployed software, without losing a single open question.
+vibey is a free project manager for AI coding agents: it plans with you, builds on your own
+machine first, stops for your decisions, and writes every step to a ledger that can only grow.
 
-**Your next step**: install it and let it interview you —
-
-```bash
-uv tool install vibey-engine && vibey doctor
-```
+**Your next step**: install it and let it interview you, with the first command on this page.
 
 **Prefer to read first?** The design is a [research paper](https://the-vibey-project.github.io/vibey/main/paper/)
 ([PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf)), and the whole documentation is a [book](https://the-vibey-project.github.io/vibey/main/book.pdf)
