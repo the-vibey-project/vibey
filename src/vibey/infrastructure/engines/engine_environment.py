@@ -43,7 +43,7 @@ class EngineEnvironmentPolicy:
     Declared by `interfaces/engine_environment_interface.py`.
     """
 
-    __slots__ = ("_allow", "_overlay", "_per_engine")
+    __slots__ = ("_allow", "_overlay", "_per_engine", "_vibey")
 
     def __init__(
         self,
@@ -51,8 +51,10 @@ class EngineEnvironmentPolicy:
         allow: Sequence[str] = (),
         per_engine: Mapping[EngineId, Sequence[str]] | None = None,
         overlay: Mapping[str, str] | None = None,
+        vibey: str = "vibey",
     ) -> None:
         self._overlay = dict(overlay or {})
+        self._vibey = vibey
         self._allow = tuple(allow)
         self._per_engine = {
             engine: tuple(entries) for engine, entries in (per_engine or {}).items()
@@ -107,22 +109,29 @@ class EngineEnvironmentPolicy:
         ).entries()
 
     def with_overlay(self, overlay: Mapping[str, str]) -> "EngineEnvironmentPolicy":
-        """This policy, plus variables vibey itself puts in every session (the non-secret web
-        search settings). They are vibey's to give, not the project's to declare, so they do
-        not pass through the allow-list; a session's own overlay wins over them."""
+        """This policy, plus variables vibey itself puts in every session. They are vibey's to
+        give, not the project's to declare, so they do not pass through the allow-list; a
+        session's own overlay (its web access, SP-LOOPS Phase 6) wins over them."""
         return EngineEnvironmentPolicy(
-            allow=self._allow, per_engine=self._per_engine, overlay={**self._overlay, **overlay}
+            allow=self._allow,
+            per_engine=self._per_engine,
+            overlay={**self._overlay, **overlay},
+            vibey=self._vibey,
         )
 
-    def web_search_command(self) -> str | None:
-        """The `vibey` a session runs to search the web, or None when sessions have no search.
+    def with_vibey_command(self, command: str) -> "EngineEnvironmentPolicy":
+        """This policy, telling each session's plan to run `command search` and `command fetch`.
 
-        Only the worker's own overlay turns it on: the worker gives every session the local
-        SearXNG's address and the path of the running `vibey`. A Brave key is never passed to a
-        session, so a session's search is the local SearXNG alone, with no backup."""
-        if "WEBSEARCH_PROVIDER" not in self._overlay:
-            return None
-        return self._overlay.get("WEBSEARCH_COMMAND", "vibey")
+        A session does not inherit vibey's own environment on PATH, so the worker gives the
+        absolute path of the `vibey` running it. The path is in the plan, never the
+        environment: the environment names only the hub and the token file (SP-LOOPS Phase 6)."""
+        return EngineEnvironmentPolicy(
+            allow=self._allow, per_engine=self._per_engine, overlay=self._overlay, vibey=command
+        )
+
+    def vibey_command(self) -> str:
+        """The `vibey` a session's plan names for `search` and `fetch`."""
+        return self._vibey
 
     def allow_list(self, descriptor: EngineDescriptor) -> EnvironmentAllowList:
         """Exactly what a `descriptor` session may receive."""

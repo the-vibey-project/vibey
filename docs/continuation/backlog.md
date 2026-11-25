@@ -11,7 +11,7 @@ smallest slice that ships on its own: tested, reviewed, and honest about what is
 
 - **Mode when GitHub runs it daily:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Take this run's backlog item and land its smallest shippable, tested slice.
-- **Decision records:** 105, the newest 0105 — Where run inputs are stored: your state folder by default, or a SeaweedFS bucket you name.
+- **Decision records:** 106, the newest 0106 — Engine sessions search through the hub, each as a principal that holds only `web`.
 - **Lanes it keeps usable:** [Backlog killer](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-killer.yml), [Backlog splitter](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-splitter.yml).
 <!-- END GENERATED continuation:state -->
 

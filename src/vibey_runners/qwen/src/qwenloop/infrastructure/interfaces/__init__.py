@@ -20,6 +20,7 @@ from qwenloop.infrastructure.interfaces.tools_interface import (
     SandboxToolsInterface,
     ShellEnvironmentInterface,
 )
+from qwenloop.infrastructure.interfaces.vibey_command_interface import VibeyCommandInterface
 from qwenloop.infrastructure.interfaces.web_search_interface import (
     WebSearchInterface,
     WebSearchToolInterface,
@@ -36,6 +37,7 @@ __all__ = [
     "SandboxToolsInterface",
     "ShellEnvironmentInterface",
     "SettingsLoaderInterface",
+    "VibeyCommandInterface",
     "VllmServerInterface",
     "WebSearchInterface",
     "WebSearchToolInterface",

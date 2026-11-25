@@ -949,14 +949,19 @@ must then be on both lists; nothing in common allows nothing) or drop content ty
 reverse. An unknown key, or a value of the wrong type or out of range, stops the hub (exit 2)
 naming the file and the key. Where search itself goes (`VIBEY_SEARXNG_URL`, the Brave key) is the
 hub's environment's, never a file's: see [local first](cli.md#local-first-search).
-`vibey fetch`, the `web_fetch` tool of gptossloop and qwenloop and the DESIGN research's page
-reads use the same hosts, bounds and content types (your own `[web]`, narrowed by the folder
-they run in), with no budget (SP-ACP Task 11a).
+`vibey fetch` run by you and the DESIGN research's page reads use the same hosts, bounds and
+content types (your own `[web]`, narrowed by the folder they run in), with no budget (SP-ACP Task
+11a). An engine session's `vibey search` and `vibey fetch` (and so the `web_fetch` tool of
+gptossloop and qwenloop, and claudeloop's `vibey-web` server) are the hub's, under its budgets:
+the session's own principal draws on `session_searches` or `session_fetches` and on the agent's
+hourly budget alike ([ADR-0106](../architecture/decisions/0106-engine-sessions-search-through-the-hub-as-a-web-only-principal.md)).
 
 | Key | Default | Meaning |
 |---|---|---|
 | `searches_per_hour` | `60` | How many searches one principal may make in any rolling hour (0 to 100000; `0` turns search off). Past it, a 429 naming this key. |
 | `fetches_per_hour` | `30` | How many fetches one principal may make in any rolling hour (0 to 100000; `0` turns fetch off). |
+| `session_searches` | `30` | How many searches one engine session's own principal may make in all, for as long as the session runs (0 to 100000; `0` turns search off for sessions only): a cap per session, not per hour. Each also counts against the agent's `searches_per_hour`; a session is refused when either is spent, with a 429 naming the one that was, and a refused call spends neither. A project's `vibey.toml` may only lower it. |
+| `session_fetches` | `15` | The same for an engine session's fetches (0 to 100000); each also counts against the agent's `fetches_per_hour`. A project's `vibey.toml` may only lower it. |
 | `allow_hosts` | unset: any public host | When set, a fetch reaches only these hosts and their subdomains (`"python.org"` covers `docs.python.org`), after every redirect too. An empty list allows none. Host names only: no scheme, port, path, wildcard or address. |
 | `deny_hosts` | `[]` | Hosts a fetch never reaches, with their subdomains; wins over `allow_hosts`. |
 | `max_bytes` | `1000000` | The most bytes of a page read (1 to 50000000); a longer page is cut and says so. |
@@ -972,7 +977,9 @@ deny_hosts = ["pastebin.com"]
 ```
 
 The budgets are kept in the hub's memory, per principal: restarting the hub starts every
-principal's hour afresh. A request refused by its budget sends nothing and is not recorded; every
+principal's hour afresh, and gives every live engine session its whole `session_searches` and
+`session_fetches` again (the agent's hourly budget, which sessions also draw on, still bounds
+them). A request refused by its budget sends nothing and is not recorded; every
 search or fetch the hub makes is recorded as the [hub API](hub-api.md#web) says (and refused
 before it is made when its record cannot be written), whatever the budget. A fetch never reaches
 a private, loopback, link-local or metadata address whatever these keys say. Any port from 1 to
@@ -996,7 +1003,7 @@ a capability.
 | `skills` | `[]` | Skill names every loop is pointed at. |
 | `disable` | `[]` | Names of plugins, MCP servers or skills to leave out. |
 | `[[loops.marketplaces]]` | none | A marketplace you added: `name` (a plain name; `vibey` is reserved), `source` (an `https://` or `ssh://` URL, `user@host:path`, or an absolute folder; `git://` and `http://` are refused as plaintext) and an optional `ref` (a branch, tag or commit to pin). `vibey loops marketplace update` fetches and locks it; until then a run that needs it stops and says so. |
-| `[[loops.mcp_servers]]` | none | An MCP server: `name`, `trust` and either `command` (for `trust = "local"`: a stdio server, its argv as a list, never run through a shell) or `url` (for `trust = "remote"`: `https://` with a host, no credentials). `env_allow` names the only environment variables a local server keeps, never one that carries a secret (a token, key, password or the Brave key). Trust decides egress, budget and which sessions mount a server; a server's output is always data, never instruction. |
+| `[[loops.mcp_servers]]` | none | An MCP server: `name`, `trust` and either `command` (for `trust = "local"`: a stdio server, its argv as a list, never run through a shell) or `url` (for `trust = "remote"`: `https://` with a host, no credentials). `env_allow` names the only environment variables a local server keeps, never one that carries a secret (a token, key, password or the Brave key); the two names of a session's web grant, exactly `VIBEY_HUB_URL` and `VIBEY_WEB_TOKEN_FILE` (a loopback address and a file path, not secrets), are the one exception, which is how the worker's `vibey-web` server reaches the hub. Trust decides egress, budget and which sessions mount a server; a server's output is always data, never instruction. |
 | `builtin_web` | `false` | Whether a loop keeps its engine's own web tools. `false`: a claudeloop run disallows Claude Code's `WebSearch` and `WebFetch`. `true` leaves them on, except on `claudeloop-local`, whose local backend cannot serve them: there they stay off and the run says so in a notice. |
 | `instruction_files` | `["CLAUDE.md", "AGENTS.md"]` | Plain file names (never paths) a claudeloop, gptossloop or qwenloop run reads from its own working folder only and appends to its system prompt as instruction text, never to the plan (the local runner within `capability_prompt_tokens`, under a heading that says they cannot override the run's contract or tool limits). A missing file is skipped; a symlink, a file that is not regular or text that is not UTF-8 is refused, never followed or read. At most 16. |
 | `instruction_max_bytes` | `65536` | The largest instruction file inlined, from 1 to 1048576. A larger one is never cut: the run names it with its size and tells the agent to read it. |
@@ -1714,7 +1721,7 @@ by hand (sub-doctrines 12.c and 12.h).
 | `timeout_seconds` | number | `1800` | Per command; one that overruns is killed and fails as exit 124. Must be finite and positive. |
 | `kill_grace_seconds` | number | `5` | How long a killed command's reap may take before it is abandoned and logged. |
 | `isolate_python_env` | bool | `true` | `false` passes vibey's own Python environment (`VIRTUAL_ENV`, `PYTHONPATH`, its venv on `PATH`) to gates that rely on tools installed beside vibey. |
-| `env_allow` | array of strings | `[]` | Environment variables a gate command may receive beyond the system basics listed under [`engine_environment`](#engine_environment). A trailing `*` names a prefix (`GRADLE_*`). A gate command is decomposer-produced argv running engine-written code, so nothing else in the worker's environment reaches it. `VIBEY_*`, `PG*` and `GIT_*` can never be declared, nor vibey's Brave Search key under its other names, `BRAVE_SEARCH_API_KEY` and `WEBSEARCH_BRAVE_API_KEY` (a breaking change for a gate that declared it: rename the project's own key in its own environment, for example `PROJECT_BRAVE_API_KEY`). A project's own test database can be (`TEST_DATABASE_URL`). |
+| `env_allow` | array of strings | `[]` | Environment variables a gate command may receive beyond the system basics listed under [`engine_environment`](#engine_environment). A trailing `*` names a prefix (`GRADLE_*`). A gate command is decomposer-produced argv running engine-written code, so nothing else in the worker's environment reaches it. `VIBEY_*`, `PG*`, `GIT_*` and `WEBSEARCH_*` (vibey's own web search settings, the SearXNG address's `WEBSEARCH_SEARXNG_URL` among them) can never be declared, nor vibey's Brave Search key under its other name, `BRAVE_SEARCH_API_KEY` (a breaking change for a gate that declared one: give the project's own key or address another name in its own environment, for example `PROJECT_BRAVE_API_KEY`). A project's own test database can be (`TEST_DATABASE_URL`). |
 
 A malformed or forbidden `gates` object is refused by `vibey new` and by the operator
 before the project is created, and raises when the worker is built.
@@ -1774,13 +1781,20 @@ engine it is declared for. Some things need declaring:
 
 Some names can never be declared, by anyone. For every engine: vibey's own `VIBEY_*`
 variables (`VIBEY_PG_URL`, the queue and ledger DSN, among them), libpq's `PG*`, any
-name containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`, and vibey's Brave Search key
+name containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`, vibey's Brave Search key
 under its other names, `BRAVE_SEARCH_API_KEY` and `WEBSEARCH_BRAVE_API_KEY` (a prefix such as
-`BRAVE_*` or `WEBSEARCH_*` is accepted, but those two names are never passed). This is a
-breaking change for a project that declared `BRAVE_SEARCH_API_KEY` so its own code could use
-Brave: `vibey new` now refuses it and the worker raises `... BRAVE_SEARCH_API_KEY can never be
-passed to a child process`. Give the project's own key another name in its own environment
-(for example `PROJECT_BRAVE_API_KEY`) and declare that. A malformed object,
+`BRAVE_*` is accepted, but those two names are never passed), and every `WEBSEARCH_*` name,
+the form vibey reads each of its own web search settings under (`WEBSEARCH_SEARXNG_URL`, the
+local SearXNG's address, among them), together with any prefix that covers one (`WEBSEARCH_*`,
+`WEB*`): no session or gate holds a SearXNG address or a Brave key. This is a breaking change
+for a project that declared one of these so its own code could use Brave or a SearXNG:
+`vibey new` now refuses it and the worker raises, for example,
+`... WEBSEARCH_SEARXNG_URL can never be passed to a child process; vibey reads it as its own web
+search setting, so give the project's own key or address another name in its own environment
+and declare that`. Give the project's own key or address another name in its own environment
+(for example `PROJECT_BRAVE_API_KEY` or `PROJECT_SEARXNG_URL`) and declare that. Your own
+`vibey.toml` keeps its rules: a local MCP server's `env_allow` may still keep such a name, and
+vibey still reads the `WEBSEARCH_*` forms from your own environment. A malformed object,
 an unknown key or engine, or a forbidden entry is refused by `vibey new` and the
 operator before the project is created, and raises when the worker is built. A
 descriptor's own `env_passthrough` is held to the same rule when its adapter is built.

@@ -24,6 +24,7 @@ from qwenloop.infrastructure.content_scanner import ContentScanner
 from qwenloop.infrastructure.inference import _CODING_TOOLS
 from qwenloop.infrastructure.interfaces import ContentScannerInterface, SandboxToolsInterface
 from qwenloop.infrastructure.tools import ANSWER_ENVELOPE_CHARS, SandboxTools, ShellEnvironment
+from qwenloop.infrastructure.web_search import WebSearchTool
 
 
 def _tree(root: Path) -> None:
@@ -509,10 +510,13 @@ async def test_reads_are_bounded_by_the_configured_character_limit(tmp_path: Pat
     assert ranged["content"] == "ghij"
 
 
-def test_a_shell_command_sees_the_web_search_settings_but_never_a_key() -> None:
+def test_a_shell_command_sees_the_hub_and_its_token_files_path_but_no_search_settings() -> None:
     env = ShellEnvironment(
         {
             "PATH": "/usr/bin",
+            "VIBEY_HUB_URL": "http://127.0.0.1:28100",
+            "VIBEY_WEB_TOKEN_FILE": "/runs/r/web-token",
+            "VIBEY_WEB_STATE": "none",
             "WEBSEARCH_PROVIDER": "searxng",
             "WEBSEARCH_SEARXNG_URL": "http://127.0.0.1:8080",
             "WEBSEARCH_API_KEY": "secret",
@@ -520,27 +524,42 @@ def test_a_shell_command_sees_the_web_search_settings_but_never_a_key() -> None:
         }
     ).build()
 
-    assert env["WEBSEARCH_PROVIDER"] == "searxng"
-    assert env["WEBSEARCH_SEARXNG_URL"] == "http://127.0.0.1:8080"
-    assert "WEBSEARCH_API_KEY" not in env
-    assert "VIBEY_SEARXNG_URL" not in env
+    assert env == {
+        "PATH": "/usr/bin",
+        "VIBEY_HUB_URL": "http://127.0.0.1:28100",
+        "VIBEY_WEB_TOKEN_FILE": "/runs/r/web-token",
+    }
 
 
 def _web_tools(tmp_path: Path, body: str, **extra: str) -> SandboxTools:
+    from qwenloop.infrastructure import tools as module
+
     script = tmp_path / "fake-vibey"
     script.write_text("#!/bin/sh\n" + body + "\n")
     script.chmod(0o755)
     source = {
         "PATH": "/usr/bin:/bin",
-        "WEBSEARCH_PROVIDER": "searxng",
-        "WEBSEARCH_COMMAND": str(script),
+        "VIBEY_HUB_URL": "http://127.0.0.1:28100",
+        "VIBEY_WEB_TOKEN_FILE": "/runs/r/web-token",
         **extra,
     }
-    return SandboxTools(tmp_path, shell_environment=ShellEnvironment(source))
+    environment = ShellEnvironment(source)
+    web = WebSearchTool(
+        tmp_path,
+        environment,
+        ToolLimits(),
+        timeout_seconds=module._WEB_TIMEOUT_SECONDS,
+        vibey=str(script),
+        source=source,
+    )
+    return SandboxTools(tmp_path, shell_environment=environment, web_search=web)
 
 
 @pytest.mark.asyncio
-async def test_web_tools_say_so_when_the_session_has_no_search(tmp_path: Path) -> None:
+async def test_web_tools_say_so_when_the_session_has_no_search(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("VIBEY_WEB_STATE", raising=False)
     tools = SandboxTools(tmp_path, shell_environment=ShellEnvironment({"PATH": "/usr/bin"}))
 
     for name, arguments in (("web_search", {"query": "x"}), ("web_fetch", {"url": "http://x"})):
@@ -603,10 +622,13 @@ async def test_a_failing_web_command_returns_its_words_or_its_exit_code(tmp_path
 
 @pytest.mark.asyncio
 async def test_a_web_command_that_cannot_start_is_an_error_not_an_exception(tmp_path: Path) -> None:
+    source = {"VIBEY_HUB_URL": "http://127.0.0.1:1", "VIBEY_WEB_TOKEN_FILE": "/f"}
+    environment = ShellEnvironment(source)
     tools = SandboxTools(
         tmp_path,
-        shell_environment=ShellEnvironment(
-            {"WEBSEARCH_PROVIDER": "searxng", "WEBSEARCH_COMMAND": str(tmp_path / "missing")}
+        shell_environment=environment,
+        web_search=WebSearchTool(
+            tmp_path, environment, ToolLimits(), vibey=str(tmp_path / "missing"), source=source
         ),
     )
 

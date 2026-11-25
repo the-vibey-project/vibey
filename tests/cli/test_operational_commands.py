@@ -688,6 +688,75 @@ def test_work_once_claudeloop_provider(tmp_path: Path) -> None:
     assert "no ready job" in res.output
 
 
+def test_work_once_claudeloop_session_is_told_it_has_no_web_and_its_search_refuses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """SP-LOOPS Phase 6: the one-shot `vibey work --provider claudeloop` DESIGN session is given
+    no web grant, so, like the worker's own DESIGN session, it is told so in exactly one name,
+    `VIBEY_WEB_STATE=none:not-given`. A `vibey search` or `vibey fetch` it runs then says why and
+    exits 78, rather than searching the local SearXNG in its own process as a person's would."""
+    import vibey.cli.main as main_module
+    from vibey.cli.web import run_fetch, run_search
+    from vibey.domain.session_web_state import NOT_GIVEN
+
+    async def seed() -> UUID:
+        async with build_app() as resources:
+            p = await resources.projects.create("cl-web", tmp_path, max_cycles=1, config={})
+            await resources.projects.transition(
+                p.project_id, expected=Phase.INTAKE, to=Phase.DESIGN
+            )
+            return p.project_id
+
+    environments: list[object] = []
+    real = main_module.AsyncSubprocessExecutor
+
+    def recording(environment: object) -> object:
+        environments.append(environment)
+        return real(environment)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(main_module, "AsyncSubprocessExecutor", recording)
+    monkeypatch.setenv("WEBSEARCH_SEARXNG_URL", "http://127.0.0.1:18081/fake-searxng")
+    monkeypatch.setenv("VIBEY_SEARXNG_URL", "http://127.0.0.1:18080/fake-searxng")
+    pid = asyncio.run(seed())
+
+    res = runner.invoke(app, ["work", str(pid), "--provider", "claudeloop"])
+
+    assert res.exit_code == 0, res.output
+    (environment,) = environments
+    env = environment.build()  # type: ignore[attr-defined]
+    assert env["VIBEY_WEB_STATE"] == "none:not-given"
+    assert {name for name in env if name.startswith("VIBEY_")} == {"VIBEY_WEB_STATE"}
+    assert not [name for name in env if name.startswith("WEBSEARCH_") or "SEARXNG" in name]
+
+    def never_opened(request: object, timeout: float) -> object:
+        raise AssertionError("a session never searches in its own process")
+
+    def no_hub(access: object) -> object:
+        raise AssertionError("a session with no web is given no hub")
+
+    class NeverFetches:
+        def fetch(self, url: str, *, max_chars: int | None = None) -> object:
+            raise AssertionError("a session never fetches in its own process")
+
+    capsys.readouterr()
+    assert run_search("q", None, False, environ=env, opener=never_opened, hub=no_hub) == 78  # type: ignore[arg-type]
+    assert capsys.readouterr().out == (
+        f"error: web search is unavailable in this session: {NOT_GIVEN}\n"
+    )
+    fetched = run_fetch(
+        "https://a.example/",
+        None,
+        False,
+        environ=env,
+        fetcher=NeverFetches(),
+        hub=no_hub,  # type: ignore[arg-type]
+    )
+    assert fetched == 78
+    assert capsys.readouterr().out == (
+        f"error: fetching a web page is unavailable in this session: {NOT_GIVEN}\n"
+    )
+
+
 def test_work_once_qwenloop_provider(tmp_path: Path) -> None:
     """--provider qwenloop (8.a's sovereign path) on the one-shot `work` command, with
     no VIBEY_EVIDENCE_DIR set — mirrors test_work_once_claudeloop_provider."""
@@ -1580,7 +1649,7 @@ def test_worker_says_where_web_search_reaches_at_startup(tmp_path: Path) -> None
         plain = runner.invoke(app, ["worker", "--once"], env={"VIBEY_SEARXNG_URL": ""})
     assert (
         "web search: the local SearXNG at http://127.0.0.1:8081 first, for DESIGN research and"
-        " every engine session" in configured.output
+        " the hub; engine sessions search only through the hub" in configured.output
     )
     assert "Brave backup configured via BRAVE_SEARCH_API_KEY" in configured.output
     assert "fake-w" not in configured.output

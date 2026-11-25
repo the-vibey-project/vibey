@@ -137,6 +137,9 @@ class MemoryDocumentStore:
     def write(self, document: SnapshotDocumentInterface, folder: Path) -> Path:
         raise AssertionError("a runner never writes its capability document")
 
+    def rewrite(self, document: SnapshotDocumentInterface, folder: Path) -> Path:
+        raise AssertionError("a runner never rewrites its capability document")
+
     def read(self, path: Path) -> SnapshotDocumentInterface:
         self.read_paths.append(path)
         if self.error is not None:

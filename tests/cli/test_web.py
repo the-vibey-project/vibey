@@ -325,7 +325,8 @@ def test_the_worker_says_where_web_search_reaches() -> None:
     plain = web_search_line(WebSearchSettings.from_environment({}))
     assert plain == (
         "web search: the local SearXNG at http://127.0.0.1:28180 first, for DESIGN research and"
-        " every engine session (vibey search, vibey fetch); no Brave backup configured"
+        " the hub; engine sessions search only through the hub, each with its own token"
+        " (vibey search, vibey fetch); no Brave backup configured"
         " (VIBEY_BRAVE_API_KEY or BRAVE_SEARCH_API_KEY sets one)"
     )
     backed = web_search_line(

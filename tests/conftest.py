@@ -363,6 +363,12 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
         "WEBSEARCH_SEARXNG_INSTANCE",
         "VIBEY_SEARCH_IDENTITY_TTL",
         "WEBSEARCH_IDENTITY_TTL",
+        # An engine session's names (SP-LOOPS Phase 6): a test run inside a session must not
+        # send `vibey search` to that session's hub, nor be refused for want of one.
+        "VIBEY_HUB_URL",
+        "VIBEY_WEB_TOKEN_FILE",
+        "VIBEY_WEB_STATE",
+        "WEBSEARCH_COMMAND",
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(backup_notice.PROCESS_BACKUP_NOTICE, "_said", False)
@@ -473,6 +479,23 @@ def _hermetic_loop_capabilities(
         return real(run_deadline, user_config=user_config if user_config is not None else person)
 
     monkeypatch.setattr(vibey.bootstrap, "loop_capabilities_service", hermetic)
+    # Nor may a BUILD run find the developer's own running hub, or mint a session into its
+    # registry (SP-LOOPS Phase 6): the hub's state folder is one in pytest's own folder, where no
+    # hub has ever run, so every run is told it has no web. A test that passes `state_dir` keeps it.
+    real_web = vibey.bootstrap.run_web_grants
+    hub_state = tmp_path_factory.getbasetemp() / "loops-person" / "hub-state"
+
+    def hermetic_web(run_deadline: Any, *, state_dir: Path | None = None) -> Any:
+        return real_web(run_deadline, state_dir=state_dir if state_dir is not None else hub_state)
+
+    monkeypatch.setattr(vibey.bootstrap, "run_web_grants", hermetic_web)
+    # Nor may a worker's start-up sweep remove anything from the developer's registry (Task 7).
+    real_sweep = vibey.bootstrap.session_registry_sweep
+
+    def hermetic_sweep(*, state_dir: Path | None = None) -> Any:
+        return real_sweep(state_dir=state_dir if state_dir is not None else hub_state)
+
+    monkeypatch.setattr(vibey.bootstrap, "session_registry_sweep", hermetic_sweep)
 
 
 _RUNTIMES = frozenset({"docker", "podman"})

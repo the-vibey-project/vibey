@@ -13,6 +13,7 @@ import asyncio
 import json
 import os
 import socket
+import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
@@ -26,16 +27,19 @@ from typer.testing import CliRunner
 
 from tests.db_roles import TestDatabaseRoles
 from vibey.application.dto import EnqueueRequest, HumanGateRequest, ProjectRecord
+from vibey.application.session_token_lookup import SessionTokenLookup
 from vibey.bootstrap import AppResources, build_app, migrations_dir
 from vibey.cli.interfaces.serve_interface import ServeCommandInterface
 from vibey.cli.main import app
 from vibey.cli.serve import SERVE, CliHubProbes, ServeCommand
 from vibey.domain.phase import Phase
+from vibey.domain.session_principal import SessionPrincipal
 from vibey.infrastructure.hub.lanes import LaneScanner
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.mdns import MdnsAdvertiser
 from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.hub.server import UvicornServer
+from vibey.infrastructure.hub.session_registry import SessionRegistry
 from vibey.infrastructure.hub.settings import HubSettings
 
 runner = CliRunner(env={"_TYPER_FORCE_DISABLE_TERMINAL": "1"})
@@ -792,3 +796,37 @@ def test_the_hub_serves_web_tools_under_the_persons_web_settings_narrowed_by_the
     assert got["second"].status_code == 429
     assert "fetches_per_hour = 1" in got["second"].json()["detail"]
     assert got["search"].status_code == 503
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
+def test_the_hub_admits_an_engine_sessions_token_to_web_search_and_nothing_else(
+    tmp_path: Path,
+) -> None:
+    """`vibey serve` asks the session registry in its own `[hub] state_dir` last, after the
+    host, the devices and the agent (SP-LOOPS Phase 6, Task 3). A session's token reaches web
+    search (503 here only because there is no project ledger to record the use in), is refused
+    403 by every other route, and a token no session holds proves nothing."""
+    got: dict[str, httpx.Response] = {}
+    token = "sess-serve-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    run = uuid4()
+
+    async def drive(client: httpx.AsyncClient, host_token: str) -> None:
+        assert server.state is not None
+        SessionRegistry(server.state).record(
+            SessionTokenLookup.digest(token),
+            SessionPrincipal(name=f"session:{run}", run_id=run, expires_at=time.time() + 3600),
+        )
+        auth = {"authorization": f"Bearer {token}"}
+        got["search"] = await client.post("/api/v1/web/search", headers=auth, json={"query": "q"})
+        got["projects"] = await client.get("/api/v1/projects", headers=auth)
+        got["unknown"] = await client.get(
+            "/api/v1/projects", headers={"authorization": "Bearer sess-nobody"}
+        )
+
+    server = Driven(drive)
+    asyncio.run(_command(tmp_path, server).run(host=None, port=None))
+    assert got["search"].status_code == 503
+    assert "no project ledger" in got["search"].json()["detail"]
+    assert got["projects"].status_code == 403
+    assert got["unknown"].status_code == 401

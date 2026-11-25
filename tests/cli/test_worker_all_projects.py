@@ -346,9 +346,18 @@ def test_the_worker_sweeps_loop_snapshots_with_every_project_before_it_starts(
         seen.append([record.config for record in await projects.list_all()])
         typer.echo("swept loop snapshots")
 
-    with patch.object(main, "_sweep_loop_snapshots", new=sweep):
+    def sessions(logger: object) -> None:
+        typer.echo("swept session registry")
+
+    with (
+        patch.object(main, "_sweep_loop_snapshots", new=sweep),
+        patch.object(main, "_sweep_session_registry", new=sessions),
+    ):
         res = runner.invoke(app, ["worker", "--all-projects", "--once"])
 
     assert res.exit_code == 0, res.output
     assert seen == [[{"engines": {"max_run_minutes": 2880}}]]
     assert res.output.index("swept loop snapshots") < res.output.index("worker started")
+    # SP-LOOPS Phase 6, Task 7: and the session principals those runs never revoked, once.
+    assert res.output.count("swept session registry") == 1
+    assert res.output.index("swept session registry") < res.output.index("worker started")

@@ -34,6 +34,11 @@ from vibey_runners.common.capabilities.interfaces.bundle_interface import Bundle
 from vibey_runners.common.capabilities.marketplace_spec import MarketplaceSpec
 from vibey_runners.common.capabilities.mcp_server_spec import McpServerSpec
 from vibey_runners.common.capabilities.plugin_spec import PluginSpec
+from vibey_runners.common.capabilities.web_grant_names import (
+    HUB_URL_NAME,
+    TOKEN_FILE_NAME,
+    WEB_GRANT_NAMES,
+)
 
 FULL: Mapping[str, Any] = {
     "marketplaces": [
@@ -532,3 +537,25 @@ def test_capability_answer_tokens_outside_256_to_8192_is_refused(value: object) 
     error = _refusal({"capability_answer_tokens": value})
     assert error.path == "loops.capability_answer_tokens"
     assert "between 256 and 8192" in error.reason
+
+
+def test_env_allow_keeps_exactly_the_two_web_grant_names() -> None:
+    """SP-LOOPS Phase 6: the hub's loopback address and the path of a session's token file are
+    not secrets -- the token stays in its 0600 file -- so a server may keep exactly these two,
+    the same pair the local runner's shell keeps (R3)."""
+    names = ["VIBEY_HUB_URL", "VIBEY_WEB_TOKEN_FILE"]
+    servers = [{"name": "vibey-web", "trust": "local", "command": ["vibey"], "env_allow": names}]
+    assert BundleSpec.from_mapping({"mcp_servers": servers}).mcp_servers[0].env_allow == tuple(
+        names
+    )
+    assert frozenset({HUB_URL_NAME, TOKEN_FILE_NAME}) == WEB_GRANT_NAMES == frozenset(names)
+
+
+@pytest.mark.parametrize(
+    "name", ["vibey_web_token_file", "VIBEY_WEB_TOKEN", "VIBEY_WEB_TOKEN_FILES", "WEB_TOKEN_FILE"]
+)
+def test_env_allow_admits_the_grant_names_exactly_and_no_name_like_them(name: str) -> None:
+    servers = [{"name": "f", "trust": "local", "command": ["x"], "env_allow": [name]}]
+    refusal = _refusal(_with(mcp_servers=servers))
+    assert refusal.path == "loops.mcp_servers[0].env_allow[0]"
+    assert "secret" in refusal.reason

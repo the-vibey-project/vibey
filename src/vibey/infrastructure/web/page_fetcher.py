@@ -1,9 +1,11 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """One page as plain text, for a model that named the URL, through the hub's guarded fetch.
 
-`vibey fetch` (and so the local runners' `web_fetch` tool, which runs it) and the DESIGN stage's
-web research read a page here (SP-ACP Task 11a, P-9b-2). A URL a model chose is attacker-
-influenced, so this is never weaker than what the hub serves an agent (`GuardedPageFetch`, read
+`vibey fetch` run by a person and the DESIGN stage's web research read a page here (SP-ACP Task
+11a, P-9b-2). An engine session never does: its `vibey fetch` (and so the local runners'
+`web_fetch` tool, which runs it) asks the hub with the session's own token, and the hub reads the
+page through `GuardedPageFetch` and charges the session's `[web]` budget (SP-LOOPS Phase 6,
+`session_hub_client.py`). A URL a model chose is attacker-influenced, so this is never weaker than what the hub serves an agent (`GuardedPageFetch`, read
 with the same policy, `domain/web_tools.py`):
 
 - the URL must be a public http(s) target, every spelling of an address read the way the hub
@@ -15,11 +17,11 @@ with the same policy, `domain/web_tools.py`):
   characters, hops and one deadline in all.
 
 The bounds and host lists are `[web]` from the person's own `vibey.toml`, narrowed by the one in
-the folder this runs in (`WEB_SETTINGS.load_trusted`): a session's worktree may only tighten
+the folder this runs in (`WEB_SETTINGS.load_trusted`): a project's folder may only tighten
 them. `max_chars` a caller asks for may lower `[web] max_chars`, never raise it.
 
-Unlike the hub's fetch it spends no budget and writes no ledger record: it runs in a session or
-a worker, where the act is the session's own. Declared by
+Unlike the hub's fetch it spends no budget and writes no ledger record: it runs in a person's
+own terminal or in the worker, where the act is theirs. Declared by
 `interfaces/page_fetcher_interface.py` (ADR-0016).
 """
 

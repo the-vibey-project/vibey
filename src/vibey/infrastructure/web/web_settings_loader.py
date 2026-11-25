@@ -23,6 +23,8 @@ from vibey.domain.web_tools import WEB_TOOL_TRUST, WebToolSettings
 _INTEGERS: Final = (
     "searches_per_hour",
     "fetches_per_hour",
+    "session_searches",
+    "session_fetches",
     "max_bytes",
     "max_chars",
     "max_redirects",

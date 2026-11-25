@@ -362,20 +362,6 @@ def test_from_the_settings_a_squatter_is_unavailable_and_the_backup_answers() ->
         plain.answer(QUERY, 2)
 
 
-def test_inside_a_session_a_failure_never_offers_a_brave_key() -> None:
-    told = WebSearchSettings.from_environment(
-        {"WEBSEARCH_PROVIDER": "searxng", "WEBSEARCH_SEARXNG_URL": "http://127.0.0.1:28180"}
-    )
-    assert told.in_session
-    opener, _ = _routing(urllib.error.URLError(ConnectionRefusedError()), BRAVE_BODY)
-    with pytest.raises(WebSearchError) as caught:
-        LocalFirstSearch.from_settings(told, opener=opener).answer(QUERY, 1)
-    said = str(caught.value)
-    assert "an engine session has no other search" in said and "vibey doctor" in said
-    assert "Brave" not in said and "BRAVE" not in said and "KEY" not in said
-    assert not WebSearchSettings.from_environment({}).in_session
-
-
 DEEP = b"[" * 100_000 + b"]" * 100_000
 
 

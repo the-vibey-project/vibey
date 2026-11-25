@@ -160,6 +160,9 @@ class _UnreadableStore:
     def write(self, document: SnapshotDocumentInterface, folder: Path) -> Path:
         raise AssertionError("never written here")
 
+    def rewrite(self, document: SnapshotDocumentInterface, folder: Path) -> Path:
+        raise AssertionError("never rewritten here")
+
     def read(self, path: Path) -> SnapshotDocumentInterface:
         raise OSError(f"cannot read {SENTINEL}")
 
@@ -267,3 +270,51 @@ def test_nothing_is_logged_when_every_allowed_name_is_set(tmp_path: Path) -> Non
 def test_a_document_without_servers_gives_none(tmp_path: Path) -> None:
     path = CapabilityDocumentWriter(tmp_path).write()
     assert _applier().load(path, cwd=tmp_path).mcp_servers == {}
+
+
+# -- the worker's `vibey-web` connector (SP-LOOPS Phase 6, Task 6; R3) ---------------------------
+
+
+def _vibey_web() -> McpServerSpec:
+    return McpServerSpec(
+        name="vibey-web",
+        trust="local",
+        command=("/opt/vibey/bin/vibey", "mcp", "--scope", "web", "--token-file", "/r/web-token"),
+        url=None,
+        env_allow=("VIBEY_HUB_URL", "VIBEY_WEB_TOKEN_FILE"),
+    )
+
+
+@pytest.mark.parametrize("local_backend", [False, True], ids=["anthropic", "local"])
+def test_the_hub_connector_is_given_and_claude_codes_own_web_tools_stay_off(
+    tmp_path: Path, local_backend: bool
+) -> None:
+    """The run searches the hub through `vibey-web`; Claude Code's own `WebSearch` and
+    `WebFetch` are still disallowed, on either backend, and nothing else is changed by it."""
+    path = CapabilityDocumentWriter(tmp_path).write(mcp_servers=[_files(), _vibey_web()])
+    logger = _RecordingLogger()
+    environ = {"VIBEY_HUB_URL": "http://127.0.0.1:28100", "VIBEY_WEB_TOKEN_FILE": "/r/web-token"}
+    applied = _applier(local_backend=local_backend, environ=environ, logger=logger).load(
+        path, cwd=tmp_path
+    )
+    assert list(applied.mcp_servers) == ["files", "vibey-web"]
+    assert applied.mcp_servers["vibey-web"] == {
+        "type": "stdio",
+        "command": LAUNCHER[0],
+        "args": [
+            *LAUNCHER[1:],
+            "--allow",
+            "VIBEY_HUB_URL",
+            "--allow",
+            "VIBEY_WEB_TOKEN_FILE",
+            "--",
+            "/opt/vibey/bin/vibey",
+            "mcp",
+            "--scope",
+            "web",
+            "--token-file",
+            "/r/web-token",
+        ],
+    }
+    assert applied.disallowed_tools == CLAUDE_BUILTIN_WEB_TOOLS == ("WebSearch", "WebFetch")
+    assert logger.calls == []

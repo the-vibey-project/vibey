@@ -133,3 +133,37 @@ def test_a_spec_that_is_neither_local_nor_remote_is_refused(server: McpServerSpe
 def test_an_empty_launcher_is_refused() -> None:
     with pytest.raises(ValueError, match="launcher"):
         McpConfigTranslator(())
+
+
+def test_the_workers_vibey_web_connector_is_stdio_through_the_launcher_with_two_names() -> None:
+    """SP-LOOPS Phase 6, Task 6 (R3): the connector the worker adds to a run that holds a web
+    grant is a local server like any other, so it is typed `stdio` and started through the
+    scrubbed launcher, which keeps exactly the grant's two names and nothing else."""
+    connector = McpServerSpec(
+        name="vibey-web",
+        trust="local",
+        command=("/opt/vibey/bin/vibey", "mcp", "--scope", "web", "--token-file", "/r/web-token"),
+        url=None,
+        env_allow=("VIBEY_HUB_URL", "VIBEY_WEB_TOKEN_FILE"),
+    )
+    config = McpConfigTranslator(LAUNCHER).translate(connector)
+    assert config == {
+        "type": "stdio",
+        "command": "/usr/bin/python3",
+        "args": [
+            "-m",
+            "vibey_runners.common.capabilities.scrubbed_exec",
+            "--allow",
+            "VIBEY_HUB_URL",
+            "--allow",
+            "VIBEY_WEB_TOKEN_FILE",
+            "--",
+            "/opt/vibey/bin/vibey",
+            "mcp",
+            "--scope",
+            "web",
+            "--token-file",
+            "/r/web-token",
+        ],
+    }
+    assert "env" not in config

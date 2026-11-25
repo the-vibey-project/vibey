@@ -4,7 +4,10 @@
 
 **Written once.** The conductor writes the document with `O_CREAT | O_EXCL | O_NOFOLLOW`, so it
 never replaces a file or writes through a symlink planted in its place, and sets mode 0600 on
-the open file whatever the umask.
+the open file whatever the umask. **Rewritten whole, in one step** (SP-LOOPS Phase 6): a run's
+own `vibey-web` connector is added once its web grant exists, after the document is written; the
+new document is written the same way at `STAGED_NAME` and renamed over the old, so a reader sees
+the old document or the new one, never a part of either, and a failure leaves the old one.
 
 **Read only from a place nobody else could have changed.** The folder must be a real folder (not
 a symlink) owned by this user, with no group or other mode bit; the document must be a regular
@@ -38,6 +41,8 @@ DOCUMENT_MAX_BYTES: Final = 4 * 1024 * 1024
 """A parser guard, not a policy limit (R14): sized from the bundle's own caps -- at most 256
 entries of at most 4096 characters, over the document's four lists -- with room to spare. The
 conductor writes the document itself, so a real one is far smaller."""
+STAGED_NAME: Final = f"{DOCUMENT_NAME}.next"
+"""Where a rewrite writes the new document before it takes the old one's place."""
 DOCUMENT_MODE: Final = 0o600
 _PRIVATE: Final = 0o077
 """The group and other mode bits, none of which the run's folder may carry."""
@@ -52,18 +57,42 @@ class SnapshotDocumentStore:
 
     def write(self, document: SnapshotDocumentInterface, folder: Path) -> Path:
         path = folder / DOCUMENT_NAME
-        data = document.to_json().encode("ascii")
-        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
         try:
-            descriptor = os.open(path, flags, DOCUMENT_MODE)
-            with os.fdopen(descriptor, "wb") as handle:
-                os.fchmod(handle.fileno(), DOCUMENT_MODE)  # whatever the umask took away
-                handle.write(data)
+            self._create(document, path)
         except OSError as exc:
             raise SnapshotDocumentError(
                 f"the capability document cannot be written at {path}: {exc}"
             ) from exc
         return path
+
+    def rewrite(self, document: SnapshotDocumentInterface, folder: Path) -> Path:
+        path = folder / DOCUMENT_NAME
+        staged = folder / STAGED_NAME
+        try:
+            self._create(document, staged)
+        except OSError as exc:
+            raise SnapshotDocumentError(
+                f"the capability document cannot be rewritten at {path}: {exc}"
+            ) from exc
+        try:
+            os.replace(staged, path)
+        except OSError as exc:
+            staged.unlink(missing_ok=True)
+            raise SnapshotDocumentError(
+                f"the capability document cannot be rewritten at {path}: {exc}"
+            ) from exc
+        return path
+
+    @staticmethod
+    def _create(document: SnapshotDocumentInterface, path: Path) -> None:
+        """Writes `document` as a new 0600 file at `path`: never over a file, never through a
+        link."""
+        data = document.to_json().encode("ascii")
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
+        descriptor = os.open(path, flags, DOCUMENT_MODE)
+        with os.fdopen(descriptor, "wb") as handle:
+            os.fchmod(handle.fileno(), DOCUMENT_MODE)  # whatever the umask took away
+            handle.write(data)
 
     def read(self, path: Path) -> SnapshotDocumentInterface:
         folder = path.parent

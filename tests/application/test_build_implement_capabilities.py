@@ -39,6 +39,7 @@ from vibey.application.dto import (
     PruneReport,
     RunHandle,
     RunSpec,
+    RunWebAccess,
 )
 from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.worker import Failure, Park, Success
@@ -73,6 +74,7 @@ class _Capabilities:
         self.calls: list[tuple[Path | None, tuple[Path, ...]]] = []
         self.prepared: list[PreparedCapabilities] = []
         self.released: list[PreparedCapabilities] = []
+        self.granted: list[RunWebAccess] = []
 
     def prepare(
         self, *, project_config: Path | None, folders: Sequence[Path]
@@ -98,6 +100,14 @@ class _Capabilities:
         )
         self.prepared.append(prepared)
         return prepared
+
+    def grant_web(self, prepared: PreparedCapabilities, web: RunWebAccess) -> PreparedCapabilities:
+        """As the real service: one more local server only for a run that holds a grant."""
+        self.log.append("grant_web")
+        self.granted.append(web)
+        if web.grant is None:
+            return prepared
+        return replace(prepared, mcp_local=prepared.mcp_local + 1)
 
     def release(self, prepared: PreparedCapabilities) -> None:
         self.log.append("release")

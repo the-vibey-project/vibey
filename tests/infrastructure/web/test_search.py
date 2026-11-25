@@ -174,38 +174,6 @@ def test_the_vibey_name_wins_over_its_websearch_alias() -> None:
     assert settings.searxng_url == "http://a:1"
 
 
-def test_what_a_session_is_told_is_enough_to_rebuild_the_same_settings_without_the_key() -> None:
-    worker = WebSearchSettings.from_environment(
-        {
-            "VIBEY_SEARXNG_URL": "http://127.0.0.1:8080",
-            "VIBEY_SEARCH_TIMEOUT": "9",
-            "VIBEY_SEARCH_RESULTS": "6",
-            "BRAVE_SEARCH_API_KEY": "fake-sekret",
-        }
-    )
-    told = worker.session_environment()
-    assert told == {
-        "WEBSEARCH_PROVIDER": "searxng",
-        "WEBSEARCH_SEARXNG_URL": "http://127.0.0.1:8080",
-        "WEBSEARCH_TIMEOUT": "9.0",
-        "WEBSEARCH_RESULTS": "6",
-        "WEBSEARCH_IDENTITY_TTL": "60.0",
-    }
-    rebuilt = WebSearchSettings.from_environment(told)
-    assert (rebuilt.searxng_url, rebuilt.timeout_seconds, rebuilt.results) == (
-        worker.searxng_url,
-        worker.timeout_seconds,
-        worker.results,
-    )
-    assert not rebuilt.has_backup and "fake-sekret" not in repr(told)
-
-
-def test_a_session_is_told_the_default_url_when_none_is_set() -> None:
-    told = WebSearchSettings.from_environment({}).session_environment()
-    assert told["WEBSEARCH_SEARXNG_URL"] == DEFAULT_SEARXNG_URL
-    assert told["WEBSEARCH_PROVIDER"] == "searxng"
-
-
 @pytest.mark.parametrize(
     ("url", "shown"),
     [
@@ -536,14 +504,13 @@ def test_the_identity_marker_and_ttl_are_read_from_the_environment() -> None:
         {"VIBEY_SEARXNG_INSTANCE": " vibey-7f3a ", "VIBEY_SEARCH_IDENTITY_TTL": "5"}
     )
     assert (settings.searxng_instance, settings.identity_ttl_seconds) == ("vibey-7f3a", 5.0)
-    told = settings.session_environment()
-    assert told["WEBSEARCH_SEARXNG_INSTANCE"] == "vibey-7f3a"
-    assert told["WEBSEARCH_IDENTITY_TTL"] == "5.0"
-    rebuilt = WebSearchSettings.from_environment(told)
-    assert (rebuilt.searxng_instance, rebuilt.identity_ttl_seconds) == ("vibey-7f3a", 5.0)
+    # A person's own `WEBSEARCH_*` names are read too.
+    aliased = WebSearchSettings.from_environment(
+        {"WEBSEARCH_SEARXNG_INSTANCE": "vibey-7f3a", "WEBSEARCH_IDENTITY_TTL": "5.0"}
+    )
+    assert (aliased.searxng_instance, aliased.identity_ttl_seconds) == ("vibey-7f3a", 5.0)
     plain = WebSearchSettings.from_environment({})
     assert plain.searxng_instance is None and plain.identity_ttl_seconds == 60.0
-    assert "WEBSEARCH_SEARXNG_INSTANCE" not in plain.session_environment()
     with pytest.raises(ConfigError, match="VIBEY_SEARCH_IDENTITY_TTL"):
         WebSearchSettings.from_environment({"VIBEY_SEARCH_IDENTITY_TTL": "0"})
 

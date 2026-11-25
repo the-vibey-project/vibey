@@ -28,6 +28,7 @@ from vibey_runners.common.capabilities.manifest import MANIFEST_PATH as LOOPS_MA
 from vibey_runners.common.capabilities.resolver import CapabilityResolver
 from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
 from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
+from vibey_runners.common.infrastructure.vibey_command import VIBEY_COMMAND
 from vibey_skills import marketplace_root
 
 from vibey import __version__
@@ -156,8 +157,12 @@ from vibey.application.review_triage_handler import ReviewTriageHandler
 from vibey.application.rotation_handoff import RotationHandoffService
 from vibey.application.run_inputs_service import RunInputsService
 from vibey.application.run_inputs_settings import RunInputsSettingsLoader
+from vibey.application.run_web_grants import RunWebGrants
+from vibey.application.session_registry_sweep import SessionRegistrySweep
+from vibey.application.session_web_principals import SessionWebPrincipals
 from vibey.application.ultra_control import UltraControlService
 from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanHandler
+from vibey.application.web_connector import WebConnector
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import WorkerLoop
 from vibey.bootstrap_interface import WorkerGateSeamsInterface
@@ -258,6 +263,10 @@ from vibey.infrastructure.files.nextcloud import NextcloudFilesAdapter
 from vibey.infrastructure.git.checkpoint import GitCheckpoint
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
+from vibey.infrastructure.hub.running_hub import RunningHub
+from vibey.infrastructure.hub.session_registry import SessionRegistry
+from vibey.infrastructure.hub.session_token_source import SecretsSessionTokenSource
+from vibey.infrastructure.hub.session_token_store import SessionTokenStore
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
 from vibey.infrastructure.inputs.lazy_input_store import LazyInputStore
@@ -803,6 +812,9 @@ def build_full_worker(
     # The person's locked capability snapshot, given to each BUILD run whose loop takes one
     # (SP-LOOPS Phase 4): `[loops]` and the lock are read at each run, never at the worker's start.
     loop_capabilities = loop_capabilities_service(run_deadline)
+    # Each BUILD run's own web-only grant from the hub running on this computer, if one is
+    # (SP-LOOPS Phase 6, Task 5): looked for at each run, never at the worker's start.
+    web_grants = run_web_grants(run_deadline)
 
     def _recording(
         handler: JobHandler, adapter: EngineAdapter, meter: SpendMeteringLedger
@@ -848,6 +860,7 @@ def build_full_worker(
             specs=resources.design_specs,
             inputs=run_inputs,
             capabilities=loop_capabilities,
+            web=web_grants,
         )
         return _recording(handler, adapter, meter)
 
@@ -1810,11 +1823,13 @@ def loop_capabilities_service(
 ) -> LoopCapabilitiesService:
     """A BUILD run's capability snapshot (SP-LOOPS Phase 4, Task 8): the person's own `[loops]`
     (`user_config`, else `acp_user_config()`), the store beside it, the resolver over that
-    store's lock and snapshot folder, the document store and the pruner. `run_deadline` is the
-    engine run deadline the sweep must outlast (R10); without one, the deadline a project with no
-    `[engines]` gets (`VIBEY_ENGINE_MAX_RUN_MINUTES`, else 240 minutes). Building it reads
-    nothing; each run reads `[loops]` and the lock afresh, so a change binds the next run.
-    Composition only."""
+    store's lock and snapshot folder, the document store, the pruner, and the `vibey-web`
+    connector a run holding a web grant is given, which runs the `vibey` beside this interpreter
+    (`VibeyCommand`, SP-LOOPS Phase 6). `run_deadline` is the engine run deadline the sweep must
+    outlast (R10); without one, the deadline a project with no `[engines]` gets
+    (`VIBEY_ENGINE_MAX_RUN_MINUTES`, else 240 minutes). Building it reads nothing but where the
+    `vibey` launcher is; each run reads `[loops]` and the lock afresh, so a change binds the next
+    run. Composition only."""
     person = user_config if user_config is not None else acp_user_config()
     store = loops_marketplace_store(person)
     return LoopCapabilitiesService(
@@ -1826,7 +1841,43 @@ def loop_capabilities_service(
         user_config=person,
         run_deadline=run_deadline if run_deadline is not None else _engine_run_deadline({}),
         logger=StructlogAppLogger(owner="loop-capabilities"),
+        # A claudeloop run's `vibey-web` connector runs the `vibey` installed beside this one,
+        # found the way the local runner finds it (SP-LOOPS Phase 6, Task 6).
+        web_connector=WebConnector(VIBEY_COMMAND.resolve()),
     )
+
+
+def run_web_grants(run_deadline: timedelta, *, state_dir: Path | None = None) -> RunWebGrants:
+    """Each BUILD run's web access (SP-LOOPS Phase 6, Task 5): the hub running on this computer,
+    found in `state_dir` -- else the person's own `[hub] state_dir`, read from
+    `acp_user_config()` as `vibey hub start` writes it there -- the way every client finds it,
+    and the run's own web-only principal, minted into that folder's session registry with a token
+    file in the run's own folder, expiring at `run_deadline` plus the margin (R4). Building it
+    reads `[hub]` once and touches nothing else. Composition only."""
+    if state_dir is None:
+        state_dir = acp_state_dir(acp_user_config())
+    logger = StructlogAppLogger(owner="session-web")
+    return RunWebGrants(
+        hub=RunningHub(state_dir, logger=logger),
+        principals=SessionWebPrincipals(
+            tokens=SecretsSessionTokenSource(),
+            files=SessionTokenStore(),
+            registry=SessionRegistry(state_dir),
+            run_deadline=run_deadline,
+            logger=logger,
+        ),
+        logger=logger,
+    )
+
+
+def session_registry_sweep(*, state_dir: Path | None = None) -> SessionRegistrySweep:
+    """The sweep of the session principals a crashed or killed worker never revoked (SP-LOOPS
+    Phase 6, Task 7; R4): the registry in `state_dir` -- else the person's own `[hub] state_dir`,
+    where `run_web_grants` mints them -- judged by the wall clock both mint and hub use. Building
+    it reads `[hub]` once and touches nothing else. Composition only."""
+    if state_dir is None:
+        state_dir = acp_state_dir(acp_user_config())
+    return SessionRegistrySweep(SessionRegistry(state_dir))
 
 
 def acp_state_dir(config_path: Path) -> Path:

@@ -48,10 +48,12 @@ from vibey.infrastructure.web.bounded_request import BoundedRequest, DeadlineExc
 from vibey.infrastructure.web.guarded_opener import GuardedOpener
 from vibey.infrastructure.web.untrusted_text import UntrustedText
 
-#: An engine session never receives a `VIBEY_*` variable (doctrine: vibey's own configuration
-#: and credentials stay out of model-driven processes), so a session reads the same settings
-#: under `WEBSEARCH_*`. Vibey puts the non-secret ones there itself (`session_environment`);
-#: the Brave key is never among them.
+#: The `WEBSEARCH_*` form of every `VIBEY_*` search setting, read after it: a person's own names
+#: (and `searxng_provisioner.OWN_URL_NAMES`'s). Before SP-LOOPS Phase 6 a worker also told every
+#: engine session the non-secret ones under these names and the session searched in its own
+#: process. No worker does any more: a session is told only the hub's address and its token
+#: file's path, or that it has no web (`engines/session_web_overlay.py`), and its `vibey search`
+#: refuses on the old names alone (`infrastructure/web/session.py`).
 SESSION_PREFIX: Final = "WEBSEARCH_"
 
 SEARCH_PROVIDER_ENV: Final = "VIBEY_SEARCH_PROVIDER"
@@ -143,9 +145,6 @@ class WebSearchSettings:
     searxng_instance: str | None = None
     """The `instance_name` the SearXNG must answer with, when one is expected."""
     identity_ttl_seconds: float = DEFAULT_IDENTITY_TTL_SECONDS
-    in_session: bool = False
-    """Read inside an engine session (vibey told it `WEBSEARCH_PROVIDER`): no Brave key can be
-    there, so a failure never suggests one."""
     provisioned: bool = False
     """The URL and marker came from the person's record of the SearXNG vibey installed."""
 
@@ -211,26 +210,8 @@ class WebSearchSettings:
             identity_ttl_seconds=_positive_float(
                 environ, SEARCH_IDENTITY_TTL_ENV, DEFAULT_IDENTITY_TTL_SECONDS
             ),
-            in_session=f"{SESSION_PREFIX}PROVIDER" in environ,
             provisioned=provision is not None,
         )
-
-    def session_environment(self) -> dict[str, str]:
-        """What an engine session is told about search: the local SearXNG's address, the identity
-        it must prove, and the limits. Nothing secret: a session is never given the Brave key (a
-        command the model chose could read it), so a session's `vibey search` has no backup. The
-        instance marker is not a secret: it tells vibey's own SearXNG from another program, not
-        from code running as you."""
-        told = {
-            f"{SESSION_PREFIX}PROVIDER": "searxng",
-            f"{SESSION_PREFIX}SEARXNG_URL": self.searxng_url,
-            f"{SESSION_PREFIX}TIMEOUT": str(self.timeout_seconds),
-            f"{SESSION_PREFIX}RESULTS": str(self.results),
-            _alias(SEARCH_IDENTITY_TTL_ENV): str(self.identity_ttl_seconds),
-        }
-        if self.searxng_instance is not None:
-            told[_alias(SEARXNG_INSTANCE_ENV)] = self.searxng_instance
-        return told
 
 
 # The module-level functions below read the environment, check a value or shape a message for

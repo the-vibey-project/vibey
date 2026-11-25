@@ -37,9 +37,9 @@ class EngineEnvironmentPolicyInterface(Protocol):
         """The builder every spawn of a `descriptor` session goes through."""
         ...
 
-    def web_search_command(self) -> str | None:
-        """The `vibey` command a session runs to search the web, or None when its sessions
-        have no web search."""
+    def vibey_command(self) -> str:
+        """The `vibey` a session's plan tells it to run `search` and `fetch` with: the worker's
+        own, absolute, when it gave one; the bare name otherwise."""
         ...
 
     def applied_to(self, adapter: EngineAdapter) -> EngineAdapter:

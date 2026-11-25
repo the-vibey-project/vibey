@@ -234,8 +234,25 @@ from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.interfaces.run_inputs_settings_interface import (
     RunInputsSettingsLoaderInterface,
 )
+from vibey.application.interfaces.run_web_grants_interface import (
+    HubLocatorInterface,
+    RunWebGrantsInterface,
+)
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.secrets import SecretsPort
+from vibey.application.interfaces.session_registry_sweep_interface import (
+    SessionPrincipalListingInterface,
+    SessionRegistrySweepInterface,
+)
+from vibey.application.interfaces.session_token_lookup_interface import (
+    SessionTokenLookupInterface,
+)
+from vibey.application.interfaces.session_web_principals_interface import (
+    SessionPrincipalRegistryInterface,
+    SessionTokenFilesInterface,
+    SessionTokenSourceInterface,
+    SessionWebPrincipalsInterface,
+)
 from vibey.application.interfaces.siem import SiemPort
 from vibey.application.interfaces.sms import SmsPort
 from vibey.application.interfaces.state_sync import (
@@ -259,6 +276,7 @@ from vibey.application.interfaces.visual import (
     VisualInventoryProducer,
     VisualInventoryRepository,
 )
+from vibey.application.interfaces.web_connector_interface import WebConnectorInterface
 from vibey.application.interfaces.worker_interface import (
     MultiProjectWorkerInterface,
     WorkerLoopInterface,
@@ -447,4 +465,14 @@ __all__ = [
     "BusPort",
     "BlobPort",
     "SiemPort",
+    "SessionPrincipalListingInterface",
+    "SessionPrincipalRegistryInterface",
+    "SessionRegistrySweepInterface",
+    "SessionTokenFilesInterface",
+    "SessionTokenLookupInterface",
+    "SessionTokenSourceInterface",
+    "SessionWebPrincipalsInterface",
+    "HubLocatorInterface",
+    "RunWebGrantsInterface",
+    "WebConnectorInterface",
 ]

@@ -41,6 +41,8 @@ def test_every_key_is_read(tmp_path: Path) -> None:
 [web]
 searches_per_hour = 10
 fetches_per_hour = 4
+session_searches = 12
+session_fetches = 3
 allow_hosts = ["python.org", "docs.rs"]
 deny_hosts = ["paste.example"]
 max_bytes = 200000
@@ -53,6 +55,8 @@ content_types = ["text/html", "text/plain"]
     assert WEB_SETTINGS.load(path) == WebToolSettings(
         searches_per_hour=10,
         fetches_per_hour=4,
+        session_searches=12,
+        session_fetches=3,
         allow_hosts=("python.org", "docs.rs"),
         deny_hosts=("paste.example",),
         max_bytes=200_000,
@@ -111,6 +115,21 @@ def test_a_project_may_only_narrow_what_the_person_set(tmp_path: Path) -> None:
     assert merged.fetches_per_hour == 2  # but it can lower one
     assert merged.deny_hosts == ("tracker.example",)  # nor clear a denied host
     assert merged.allow_hosts == ("example.com",)  # and it can narrow to its own list
+
+
+def test_a_project_may_lower_a_sessions_caps_and_never_raise_them(tmp_path: Path) -> None:
+    user = _file(tmp_path / "me", "vibey.toml", "[web]\nsession_searches = 8\n")
+    project = _file(
+        tmp_path / "repo", "vibey.toml", "[web]\nsession_searches = 800\nsession_fetches = 2\n"
+    )
+    merged = WEB_SETTINGS.load_trusted(user, project)
+    assert (merged.session_searches, merged.session_fetches) == (8, 2)
+
+
+def test_a_session_cap_that_is_not_a_whole_number_is_refused_naming_it(tmp_path: Path) -> None:
+    path = _file(tmp_path, "vibey.toml", "[web]\nsession_fetches = 'lots'\n")
+    with pytest.raises(ConfigError, match="session_fetches"):
+        WEB_SETTINGS.load(path)
 
 
 def test_with_no_project_file_or_the_same_file_the_person_s_settings_stand(tmp_path: Path) -> None:

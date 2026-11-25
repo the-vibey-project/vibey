@@ -33,6 +33,7 @@ from vibey.application.dto import (
     PreflightResult,
     RunHandle,
     RunSpec,
+    RunWebAccess,
     SnapshotRef,
     StopSummary,
 )
@@ -51,6 +52,7 @@ from vibey.infrastructure.engines.interfaces.engine_environment_interface import
 from vibey.infrastructure.engines.interfaces.session_log_interface import SessionLogInterface
 from vibey.infrastructure.engines.loop_events import translate_event_type
 from vibey.infrastructure.engines.session_log import SessionLog
+from vibey.infrastructure.engines.session_web_overlay import SESSION_WEB_OVERLAY
 from vibey.infrastructure.process import (
     DEFAULT_KILL_GRACE_SECONDS,
     ChildEnvironment,
@@ -61,7 +63,6 @@ from vibey.infrastructure.process.interfaces import (
     OrchestratorPythonEnvInterface,
     ProcessReaperInterface,
 )
-from vibey.infrastructure.web.session import web_access_note
 
 logger = structlog.get_logger(__name__)
 
@@ -105,15 +106,22 @@ MODEL_VOICE_CONTRACT = (
 
 
 def _render_plan(
-    descriptor: EngineDescriptor, prompt: str, *, web_command: str | None = None
+    descriptor: EngineDescriptor,
+    prompt: str,
+    *,
+    web: RunWebAccess | None = None,
+    vibey: str = "vibey",
 ) -> str:
     """Render a vendor-compatible work plan without dropping prompt detail.
 
-    With `web_command`, the session can search the web through vibey, and the plan says how."""
+    With `web`, the plan says what the session's web access is: how to run `vibey search` and
+    `vibey fetch` (as `vibey`) through the hub, or that search is unavailable and why
+    (SP-LOOPS Phase 6). Module-level as it was: it holds no state."""
     summary = next((line.strip() for line in prompt.splitlines() if line.strip()), "Complete task")
     prompt = f"{MODEL_VOICE_CONTRACT}\n\n{prompt}"
-    if web_command is not None:
-        prompt = f"{prompt.rstrip()}\n\n{web_access_note(web_command)}\n"
+    note = SESSION_WEB_OVERLAY.plan_note(web, vibey)
+    if note is not None:
+        prompt = f"{prompt.rstrip()}\n\n{note}\n"
     if descriptor.engine_id is not EngineId.CODEXLOOP:
         return prompt
 
@@ -216,11 +224,14 @@ class LoopProcessAdapter:
             ),
         )
 
-    def _engine_environment(self) -> dict[str, str]:
+    def _engine_environment(self, session: Mapping[str, str] | None = None) -> dict[str, str]:
         """The environment every process of this engine starts with: the probes and
-        the session alike, built by the engine's environment policy."""
+        the session alike, built by the engine's environment policy. A session's own
+        overlay (its web access) is laid over last, and only on the run itself."""
         return self.environment.environment(
-            self.descriptor, overlay=self.env_overlay, python_env=self.python_env
+            self.descriptor,
+            overlay={**self.env_overlay, **(session or {})},
+            python_env=self.python_env,
         ).build()
 
     async def _spawn(
@@ -230,11 +241,13 @@ class LoopProcessAdapter:
         stderr: int | TextIO,
         cwd: Path | None = None,
         start_new_session: bool = False,
+        session: Mapping[str, str] | None = None,
     ) -> asyncio.subprocess.Process:
         """`asyncio.create_subprocess_exec` with the engine's allow-listed environment.
 
         There is no way to pass another environment, and no way to inherit the
-        worker's: a spawn that could would be the one that leaks it.
+        worker's: a spawn that could would be the one that leaks it. `session` is the
+        run's own overlay, checked by the same rule (`MODEL_SESSION_FORBIDDEN`).
         `start_new_session=True` makes the child lead a process group of its own, which
         `_communicate`'s kill needs to reach everything the child started.
         """
@@ -243,7 +256,7 @@ class LoopProcessAdapter:
             stdout=stdout,
             stderr=stderr,
             cwd=cwd,
-            env=self._engine_environment(),
+            env=self._engine_environment(session),
             start_new_session=start_new_session,
         )
 
@@ -399,7 +412,10 @@ class LoopProcessAdapter:
             plan_path = plan_dir / f"{spec.run_id}.md"
             plan_path.write_text(
                 _render_plan(
-                    self.descriptor, spec.prompt, web_command=self.environment.web_search_command()
+                    self.descriptor,
+                    spec.prompt,
+                    web=spec.web,
+                    vibey=self.environment.vibey_command(),
                 )
             )
 
@@ -436,12 +452,15 @@ class LoopProcessAdapter:
             # everything the runner started, not just the runner (a background test
             # server, a shell's children). The group also means a Ctrl-C of the worker
             # no longer reaches the session, which `end_active_sessions` makes up for.
+            # The run's web access (SP-LOOPS Phase 6): the hub's address and its token file's
+            # path, or that it has none -- exactly these names, never a search backend or a key.
             process = await self._spawn(
                 *argv,
                 stdout=stdout_file,
                 stderr=stderr_file,
                 cwd=spec.worktree_path,
                 start_new_session=True,
+                session=SESSION_WEB_OVERLAY.environment(spec.web),
             )
         except Exception as e:
             stdout_file.close()

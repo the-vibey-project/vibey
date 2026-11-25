@@ -60,6 +60,7 @@ from vibey_runners.common.capabilities.marketplace_spec import MarketplaceSpec
 from vibey_runners.common.capabilities.mcp_server_spec import McpServerSpec, McpTrust
 from vibey_runners.common.capabilities.names import NAME_PATTERN
 from vibey_runners.common.capabilities.plugin_spec import PluginSpec
+from vibey_runners.common.capabilities.web_grant_names import WEB_GRANT_NAMES
 
 MAX_ENTRIES: Final = 256
 """The most entries any one `[loops]` list may hold."""
@@ -124,7 +125,8 @@ SECRET_ENV_NAMES: Final = frozenset(
 SECRET_ENV_PATTERN: Final = re.compile(r"TOKEN|SECRET|PASSWORD|API_KEY|_KEY$|BRAVE", re.I)
 """Any other variable named like a secret: a local MCP server's output reaches the model, so it
 never keeps one (Global Constraint 3: a loop never receives the host or agent token or a Brave
-key)."""
+key). The two names of a session's web grant (`web_grant_names.py`), spelled exactly, are the
+only exception: an address and a file's path, never the token (SP-LOOPS Phase 6, R3)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -421,6 +423,8 @@ class BundleSpec:
             raise BundleError(path, "must be a list of environment variable names")
         for index, name in enumerate(names):
             text = str(name)
+            if text in WEB_GRANT_NAMES:
+                continue  # the hub's address and a token file's path: neither is a secret
             if text.upper() in SECRET_ENV_NAMES or SECRET_ENV_PATTERN.search(text):
                 raise BundleError(
                     f"{path}[{index}]",

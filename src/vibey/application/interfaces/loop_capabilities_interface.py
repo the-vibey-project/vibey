@@ -15,7 +15,7 @@ from typing import Protocol, runtime_checkable
 
 from vibey_runners.common.capabilities.lock_entry import LockEntry
 
-from vibey.application.dto import PreparedCapabilities, PruneReport
+from vibey.application.dto import PreparedCapabilities, PruneReport, RunWebAccess
 
 
 @runtime_checkable
@@ -34,6 +34,17 @@ class LoopCapabilitiesInterface(Protocol):
         lock that cannot be read is one too), `ConfigError` for a `[loops]` table that cannot be
         read, or `SnapshotDocumentError` when the document cannot be written; on any of them no
         run folder is left behind."""
+        ...
+
+    def grant_web(self, prepared: PreparedCapabilities, web: RunWebAccess) -> PreparedCapabilities:
+        """Gives a run that holds a web grant its `vibey-web` MCP connector (SP-LOOPS Phase 6,
+        Task 6; R3): the run's document is read back strictly and rewritten whole, in one step,
+        with exactly one more local server after the person's own, and the counts returned say
+        one more local server. A run with no grant is returned as it is, its document untouched.
+        A person's own server already named `vibey-web`, or a document that cannot be read or
+        rewritten, leaves the document as it was and is logged (the error by its class alone);
+        this never raises for them, since a run is never stopped for want of search.
+        Synchronous and small: BUILD calls it beside opening the run's web access."""
         ...
 
     def release(self, prepared: PreparedCapabilities) -> None:

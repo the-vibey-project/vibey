@@ -159,17 +159,20 @@ def test_an_allow_list_that_already_holds_a_forbidden_name_cannot_be_narrowed_on
 
 
 def test_the_forbidden_rules_are_exactly_these() -> None:
-    # The Brave Search key's alias is vibey's credential under a non-`VIBEY_*` name.
+    # The Brave Search key's alias is vibey's credential under a non-`VIBEY_*` name, and every
+    # `WEBSEARCH_*` name is one of vibey's own web search settings (SP-LOOPS Phase 6).
+    web = ("WEBSEARCH_", "BRAVE_SEARCH_API_KEY", "WEBSEARCH_BRAVE_API_KEY")
     assert (
         ForbiddenEnvironment(
-            prefixes=("VIBEY_", "PG", "GIT_"),
+            prefixes=("VIBEY_", "PG", "GIT_", "WEBSEARCH_"),
             markers=("BRAVE_SEARCH_API_KEY", "WEBSEARCH_BRAVE_API_KEY"),
+            web_settings=web,
         )
         == GATE_FORBIDDEN
     )
     assert (
         ForbiddenEnvironment(
-            prefixes=("VIBEY_", "PG"),
+            prefixes=("VIBEY_", "PG", "WEBSEARCH_"),
             markers=(
                 "DSN",
                 "DATABASE_URL",
@@ -178,9 +181,39 @@ def test_the_forbidden_rules_are_exactly_these() -> None:
                 "BRAVE_SEARCH_API_KEY",
                 "WEBSEARCH_BRAVE_API_KEY",
             ),
+            overlay_grants=("VIBEY_HUB_URL", "VIBEY_WEB_STATE", "VIBEY_WEB_TOKEN_FILE"),
+            web_settings=web,
         )
         == MODEL_SESSION_FORBIDDEN
     )
+
+
+def test_only_the_session_web_names_may_be_laid_over_a_session_and_no_list_admits_them() -> None:
+    """The worker gives a session the hub's address and its token file's path (SP-LOOPS Phase 6,
+    R1) in its own overlay. Those three names, and no other `VIBEY_*`, pass the overlay check;
+    no allow-list may admit them, so a worker's own copy is never inherited; a gate gets none."""
+    for name in ("VIBEY_HUB_URL", "VIBEY_WEB_TOKEN_FILE", "VIBEY_WEB_STATE"):
+        assert MODEL_SESSION_FORBIDDEN.forbids(name)
+        assert MODEL_SESSION_FORBIDDEN.grants_overlay(name)
+        assert not GATE_FORBIDDEN.grants_overlay(name)
+        with pytest.raises(ValueError, match=name):
+            EnvironmentAllowList([name], forbidden=MODEL_SESSION_FORBIDDEN)
+    for name in ("VIBEY_PG_URL", "VIBEY_AGENT_TOKEN", "VIBEY_SEARXNG_URL", "PATH"):
+        assert not MODEL_SESSION_FORBIDDEN.grants_overlay(name)
+
+    session = EnvironmentAllowList([], forbidden=MODEL_SESSION_FORBIDDEN)
+    env = ChildEnvironment(
+        session,
+        overlay={"VIBEY_HUB_URL": "http://127.0.0.1:1", "VIBEY_WEB_TOKEN_FILE": "/r/web-token"},
+        source={**_WORKER, "VIBEY_WEB_STATE": "none", "VIBEY_HUB_URL": "http://elsewhere:1"},
+    ).build()
+    assert env["VIBEY_HUB_URL"] == "http://127.0.0.1:1"
+    assert "VIBEY_WEB_STATE" not in env
+    with pytest.raises(ValueError, match="VIBEY_PG_URL"):
+        ChildEnvironment(session, overlay={"VIBEY_PG_URL": "postgresql://x"})
+    gate = EnvironmentAllowList([], forbidden=GATE_FORBIDDEN)
+    with pytest.raises(ValueError, match="VIBEY_HUB_URL"):
+        ChildEnvironment(gate, overlay={"VIBEY_HUB_URL": "http://127.0.0.1:1"})
 
 
 def test_the_system_allow_list_is_exactly_what_is_declared() -> None:
