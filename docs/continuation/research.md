@@ -17,7 +17,7 @@ bending a protocol to fit an outcome.
 
 - **Mode when GitHub runs it weekly:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Keep every weekly measurement and every registered study running without breaking its protocol.
-- **Decision records:** 105, the newest 0105 — Where run inputs are stored: your state folder by default, or a SeaweedFS bucket you name.
+- **Decision records:** 106, the newest 0106 — Engine sessions search through the hub, each as a principal that holds only `web`.
 - **Lanes it keeps usable:** [Review canary](https://github.com/the-vibey-project/vibey/actions/workflows/review-canary.yml), [Minimum specs](https://github.com/the-vibey-project/vibey/actions/workflows/minimum-specs.yml), [Host health](https://github.com/the-vibey-project/vibey/actions/workflows/host-health.yml), [Autonomy scorecard](https://github.com/the-vibey-project/vibey/actions/workflows/autonomy-scorecard.yml), [First hour](https://github.com/the-vibey-project/vibey/actions/workflows/first-hour.yml), [Continuation prompts](https://github.com/the-vibey-project/vibey/actions/workflows/continuation-prompts.yml).
 <!-- END GENERATED continuation:state -->
 

@@ -337,6 +337,8 @@ def test_host_list_entries_are_kept_lowercase_without_a_trailing_dot() -> None:
 def test_the_defaults_are_the_documented_ones() -> None:
     assert ANY.searches_per_hour == 60
     assert ANY.fetches_per_hour == 30
+    assert ANY.session_searches == 30
+    assert ANY.session_fetches == 15
     assert ANY.allow_hosts is None
     assert ANY.deny_hosts == ()
     assert ANY.max_bytes == 1_000_000
@@ -352,6 +354,9 @@ def test_the_defaults_are_the_documented_ones() -> None:
     [
         {"searches_per_hour": -1},
         {"fetches_per_hour": 100_001},
+        {"session_searches": -1},
+        {"session_fetches": 100_001},
+        {"session_searches": True},
         {"max_bytes": 0},
         {"max_bytes": 50_000_001},
         {"max_chars": 99},
@@ -397,6 +402,19 @@ def test_a_project_may_only_lower_a_budget_or_a_bound() -> None:
     )
     kept = WEB_TOOL_TRUST.merge(user, higher, keys)
     assert (kept.searches_per_hour, kept.max_bytes, kept.timeout_seconds) == (10, 500_000, 10.0)
+
+
+def test_a_project_may_only_lower_a_sessions_caps() -> None:
+    """`session_searches` and `session_fetches` follow the same trust rule as the hourly
+    budgets: the person grants, a project may only narrow (SP-LOOPS Phase 6, R2)."""
+    user = WebToolSettings(session_searches=10, session_fetches=4)
+    keys = frozenset({"session_searches", "session_fetches"})
+    lower = WEB_TOOL_TRUST.merge(user, WebToolSettings(session_searches=2, session_fetches=1), keys)
+    assert (lower.session_searches, lower.session_fetches) == (2, 1)
+    higher = WEB_TOOL_TRUST.merge(
+        user, WebToolSettings(session_searches=900, session_fetches=900), keys
+    )
+    assert (higher.session_searches, higher.session_fetches) == (10, 4)
 
 
 def test_a_key_the_project_does_not_name_is_the_users() -> None:

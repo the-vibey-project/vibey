@@ -19,6 +19,14 @@ class SnapshotDocumentStoreInterface(Protocol):
         path. Raises `SnapshotDocumentError` when it cannot be written."""
         ...
 
+    def rewrite(self, document: SnapshotDocumentInterface, folder: Path) -> Path:
+        """Replaces the document in `folder` with `document` in one step (SP-LOOPS Phase 6): the
+        new one is written as a new 0600 file beside it, never through a symlink, then renamed
+        over it, so a reader sees the old document or the new one, never part of either. Returns
+        its path. Raises `SnapshotDocumentError` when it cannot be rewritten; the old document
+        is then left as it was, and nothing staged is left behind by a failed rename."""
+        ...
+
     def read(self, path: Path) -> SnapshotDocumentInterface:
         """The document at `path`, read strictly. Raises `SnapshotDocumentError` when its folder
         is not a folder this user owns with no group or other mode bit, when the document is not

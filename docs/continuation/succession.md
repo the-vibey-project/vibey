@@ -19,7 +19,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 105, the newest 0105 — Where run inputs are stored: your state folder by default, or a SeaweedFS bucket you name.
+- **Decision records:** 106, the newest 0106 — Engine sessions search through the hub, each as a principal that holds only `web`.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

@@ -100,6 +100,7 @@ from vibey.domain.interfaces.run_ownership_interface import RunOwnershipInterfac
 from vibey.domain.ledger_query import DEFAULT_SEARCH_LIMIT, InvalidLedgerQuery
 from vibey.domain.remote_command import RemoteCommandRefused, RemoteState, RemoteStatus
 from vibey.domain.run_ownership import NONCE_CHARS
+from vibey.domain.session_principal import SESSION_PRINCIPALS
 from vibey.domain.web_tools import (
     MAX_QUERY_CHARS,
     MAX_URL_CHARS,
@@ -327,6 +328,11 @@ WEB_ROUTES: Final = f"/api/v{HUB_API_VERSION}/web/"
 """Where the hub's web tools answer (ADR-0102). A malformed body there is refused without the
 values it carried: a query or a URL is never echoed back, not even in a 422."""
 
+SESSION_ROUTES: Final = frozenset({f"{WEB_ROUTES}search", f"{WEB_ROUTES}fetch"})
+"""The only routes an engine session's own principal reaches (SP-LOOPS Phase 6): every other
+route refuses it 403 before the route runs, whatever the route itself would check, and no live
+feed ever opens for it."""
+
 
 class WebSearchBody(BaseModel):
     """The body of `POST /api/v1/web/search`: the query, and nothing the caller could use to
@@ -442,6 +448,15 @@ class HubAppFactory:
             # vibey_bootstrap's token bucket, one per principal (the dogfood rule).
             if not spend(f"principal:{found.name}", self._burst, self._rate):
                 raise HTTPException(status_code=429)
+            if (
+                SESSION_PRINCIPALS.names_session(found.name)
+                and request.url.path not in SESSION_ROUTES
+            ):
+                # Decided here, once, for every route: an engine session proves who it is
+                # (so not a 401) and may only search and fetch the web.
+                raise HubForbidden(
+                    f"{found.name} is an engine session's: it may only search and fetch the web"
+                )
             return found
 
         who = Annotated[HubPrincipal, Depends(principal)]
@@ -834,10 +849,16 @@ class HubAppFactory:
                 body=b"",
             )
 
+        async def feeds(request: HubRequest) -> bool:
+            """Whether a live feed may open: the request proves a principal, and not an
+            engine session's, which reaches no feed (`SESSION_ROUTES`)."""
+            caller = await authenticator.authenticate(request)
+            return caller is not None and not SESSION_PRINCIPALS.names_session(caller.name)
+
         @app.websocket(f"{v1}/projects/{{project_id}}/live")
         async def project_live(socket: WebSocket, project_id: UUID, after: int = 0) -> None:
             request = await admitted(socket)
-            if request is None or (await authenticator.authenticate(request)) is None:
+            if request is None or not await feeds(request):
                 await socket.close(code=POLICY_VIOLATION)
                 return
             with live.subscribe(project_id) as wake:
@@ -874,7 +895,7 @@ class HubAppFactory:
         @app.websocket(f"{v1}/lanes/live")
         async def lane_live(socket: WebSocket, path: str, after: int = 0) -> None:
             request = await admitted(socket)
-            if request is None or (await authenticator.authenticate(request)) is None:
+            if request is None or not await feeds(request):
                 await socket.close(code=POLICY_VIOLATION)
                 return
             offset = max(after, 0)

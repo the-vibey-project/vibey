@@ -346,15 +346,17 @@ def test_the_capabilities_each_runner_shows() -> None:
     context = PluginSystem.SKILLS_CONTEXT
     bundle = PluginSystem.VIBEY_BUNDLE
     assert shown == {
-        # Web search off until Phase 6 gives every loop `vibey_search` (SP-LOOPS Phase 4, R4).
-        "claudeloop": (*claude, False),
+        # Web search through the hub, by the `vibey-web` connector in the run's snapshot
+        # (SP-LOOPS Phase 6, Task 6; R3).
+        "claudeloop": (*claude, True),
         # No MCP code in codexloop: unknown, not yes (SP-LOOPS Task 1).
         "codexloop": (None, True, True, None, context, None, None, None),
         # The local runner takes the snapshot as the vibey bundle (SP-LOOPS Phase 5, Task 9).
         "gptossloop": (False, True, True, False, bundle, True, True, True),
         "qwenloop": (False, True, True, False, bundle, True, True, True),
-        # The same binary, but a local backend cannot serve web search.
-        "claudeloop-local": (*claude, False),
+        # The same binary and the same snapshot, so the same connector; its own web tools stay
+        # off whatever the person sets (R11).
+        "claudeloop-local": (*claude, True),
     }
 
 
@@ -365,11 +367,11 @@ def test_the_gaps_between_each_lane_and_full_access_are_pinned() -> None:
     entry here is a capability gap to close in the runner, not a fact to accept."""
     gaps = {d.engine_id.value: d.affordances.full_access_gaps() for d in ALL_DESCRIPTORS}
     assert gaps == {
-        "claudeloop": ("web_search",),
+        "claudeloop": (),
         "codexloop": ("skills", "plugins", "mcp", "web_search"),
         "gptossloop": (),
         "qwenloop": (),
-        "claudeloop-local": ("web_search",),
+        "claudeloop-local": (),
     }
 
 
@@ -426,10 +428,13 @@ def test_local_runner_snapshot_evidence_says_the_real_run_probe_is_pending(
             assert cite in evidence, (descriptor.engine_id, affordance, cite)
 
 
-def test_claudeloop_claims_no_web_search_while_builtin_web_is_off_by_default() -> None:
-    """`[loops] builtin_web` is off unless a person sets it, and then claudeloop disallows
-    Claude Code's own web tools (SP-LOOPS Phase 4, R4). A claim of web search would be a claim
-    the default run does not have; `claudeloop-local` never has them, whatever the key (R11)."""
+def test_claudeloop_searches_the_hub_through_its_connector_and_its_own_web_tools_stay_off() -> None:
+    """SP-LOOPS Phase 6, Task 6 (R3): claudeloop's web search is the hub's, through the
+    `vibey-web` connector the worker adds to the run's snapshot when the run holds a grant; with
+    no hub the snapshot carries none and the run is told search is off. Claude Code's own
+    `WebSearch` and `WebFetch` stay disallowed (`[loops] builtin_web` is off unless a person sets
+    it, R4), and on a local backend whatever the key (R11). The same binary takes the same
+    snapshot, so claudeloop-local is given the same connector."""
     from vibey_runners.common.capabilities.bundle import BundleSpec
 
     from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
@@ -438,10 +443,37 @@ def test_claudeloop_claims_no_web_search_while_builtin_web_is_off_by_default() -
     assert BundleSpec.from_mapping({}).builtin_web is False
     for descriptor in (CLAUDELOOP, CLAUDELOOP_LOCAL):
         evidence = descriptor.affordances.evidence["web_search"]
-        assert descriptor.affordances.web_search is False, descriptor.engine_id
-        assert "builtin_web" in evidence and "CLAUDE_BUILTIN_WEB_TOOLS" in evidence, evidence
+        assert descriptor.affordances.web_search is True, descriptor.engine_id
+        assert descriptor.web_connector is True, descriptor.engine_id
+        for cite in (
+            "`vibey-web`",
+            "vibey mcp --scope web",
+            '"type": "stdio"',
+            "scrubbed launcher",
+            "VIBEY_HUB_URL",
+            "VIBEY_WEB_TOKEN_FILE",
+            "vibey_search",
+            "vibey_fetch",
+            "no hub",
+            "builtin_web",
+            "CLAUDE_BUILTIN_WEB_TOOLS",
+            "WebSearch",
+            "WebFetch",
+        ):
+            assert cite in evidence, (descriptor.engine_id, cite)
+        assert evidence.endswith("unit-proven; real-run probe pending"), descriptor.engine_id
+        assert "Every loop gets" not in evidence  # the promise is kept, not repeated
     assert "R11" in CLAUDELOOP_LOCAL.affordances.evidence["web_search"]
     assert "--web-search" not in CLAUDELOOP.launch_flags
+
+
+def test_only_a_loop_without_web_tools_of_its_own_is_given_the_connector() -> None:
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    given = {d.engine_id.value for d in ALL_DESCRIPTORS if d.web_connector}
+    assert given == {"claudeloop", "claudeloop-local"}
+    assert all(d.capabilities_flag is not None for d in ALL_DESCRIPTORS if d.web_connector)
+    assert CLAUDELOOP_LOCAL.web_connector is CLAUDELOOP.web_connector
 
 
 @pytest.mark.parametrize("affordance", ["files", "plugins", "mcp", "skills"])

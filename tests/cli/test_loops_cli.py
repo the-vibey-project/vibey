@@ -284,11 +284,15 @@ def test_every_capability_a_descriptor_holds_is_in_the_document() -> None:
     codexloop = _engine(document, "codexloop")["capabilities"]
 
     assert claudeloop["skills"] is True
-    # Off by default (SP-LOOPS Phase 4, R4): the snapshot's `[loops] builtin_web` decides.
-    assert claudeloop["web_search"] is False
+    # Through the hub, by the `vibey-web` connector in the run's snapshot (SP-LOOPS Phase 6,
+    # Task 6); Claude Code's own web tools stay off unless `[loops] builtin_web` says (R4).
+    assert claudeloop["web_search"] is True
+    assert "`vibey-web`" in claudeloop["evidence"]["web_search"]
     assert "builtin_web" in claudeloop["evidence"]["web_search"]
     assert "--capabilities" in claudeloop["evidence"]["files"]
-    assert _engine(document, "claudeloop-local")["capabilities"]["web_search"] is False
+    local = _engine(document, "claudeloop-local")["capabilities"]
+    assert local["web_search"] is True
+    assert "`vibey-web`" in local["evidence"]["web_search"]
     assert _engine(document, "gptossloop")["capabilities"]["skills"] is True
     assert (codexloop["mcp"], codexloop["skills"], codexloop["web_search"]) == (None, None, None)
     assert codexloop["evidence"]["mcp"].startswith("unknown: ")
@@ -469,7 +473,7 @@ def test_the_table_says_what_each_effort_passes_and_how_to_switch_a_local_engine
     ) in lines
     assert (
         "  claudeloop capabilities: yes files, paste_text, plugins (claude-plugins), mcp, "
-        "skills; no web_search; unknown images, paste_images"
+        "skills, web_search; unknown images, paste_images"
     ) in lines
     assert (
         "  codexloop capabilities: yes files, paste_text, plugins (skills-context); unknown "

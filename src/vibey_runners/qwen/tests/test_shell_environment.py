@@ -79,3 +79,36 @@ async def test_the_shell_tool_runs_with_the_allow_listed_environment(
 
 def test_the_class_satisfies_its_declared_interface() -> None:
     assert isinstance(ShellEnvironment({}), ShellEnvironmentInterface)
+
+
+def test_exactly_the_two_web_names_of_vibeys_pass_and_every_other_vibey_or_token_name_is_kept_out() -> (
+    None
+):
+    """SP-LOOPS Phase 6: a session's `vibey search` needs the hub's loopback address and the path
+    of the session's own token file; neither is a secret (the token stays in its 0600 file).
+    Those two names pass; `VIBEY_WEB_STATE`, every other `VIBEY_*` name and every `*TOKEN*` name
+    is still stripped, and nothing can declare one of them back in."""
+    source = {
+        **_WORKER,
+        "VIBEY_HUB_URL": "http://127.0.0.1:28100",
+        "VIBEY_WEB_TOKEN_FILE": "/runs/r/web-token",
+        "VIBEY_WEB_STATE": "none",
+        "VIBEY_AGENT_TOKEN": "agent-secret",
+        "VIBEY_HUB_TOKEN": "host-secret",
+        "WEBSEARCH_PROVIDER": "searxng",
+        "WEBSEARCH_COMMAND": "/v/vibey",
+    }
+    env = ShellEnvironment(source).build()
+
+    assert {name for name in env if name.startswith("VIBEY_")} == {
+        "VIBEY_HUB_URL",
+        "VIBEY_WEB_TOKEN_FILE",
+    }
+    assert frozenset({"VIBEY_HUB_URL", "VIBEY_WEB_TOKEN_FILE"}) == ShellEnvironment.WEB_NAMES
+    for kept_out in ("VIBEY_PG_URL", "VIBEY_AGENT_TOKEN", "VIBEY_HUB_TOKEN", "VIBEY_WEB_STATE"):
+        assert kept_out not in env
+    assert not [name for name in env if "TOKEN" in name and name != "VIBEY_WEB_TOKEN_FILE"]
+    assert not [name for name in env if name.startswith("WEBSEARCH_")]
+    for forbidden in ("VIBEY_PG_URL", "VIBEY_AGENT_TOKEN", "VIBEY_WEB_STATE"):
+        with pytest.raises(ValueError, match="can never be passed"):
+            ShellEnvironment(source, extra=(forbidden,))

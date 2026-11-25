@@ -156,12 +156,12 @@ from vibey.infrastructure.engines.ollama_chat import (
 )
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
+from vibey.infrastructure.engines.session_web_overlay import SESSION_WEB_OVERLAY
 from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, default_wire_log_path
 from vibey.infrastructure.logging import StructlogAppLogger, configure_logging
 from vibey.infrastructure.ollama_pull import DEFAULT_WAIT_SECONDS
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, PostgresLocalService, PostgresStatus
 from vibey.infrastructure.web.search import WebSearchSettings
-from vibey.infrastructure.web.session import COMMAND_VARIABLE
 from vibey.infrastructure.worker_processes import DEFAULT_GRACE_SECONDS, WorkerStopper
 
 app = typer.Typer(name="vibey", no_args_is_help=True)
@@ -867,9 +867,13 @@ async def _work_once(
         if provider == "scripted":
             design_provider = ScriptedDesignProvider()
         elif provider == "claudeloop":
+            # Given no web grant, the session is told so (`none:not-given`), as the worker's own
+            # DESIGN session is: its `vibey search` then refuses rather than search as a person's.
             claude_process = ClaudeLoopProcess(
                 executor=AsyncSubprocessExecutor(
-                    EngineEnvironmentPolicy.from_config(project.config).environment(CLAUDELOOP)
+                    EngineEnvironmentPolicy.from_config(project.config)
+                    .with_overlay(SESSION_WEB_OVERLAY.environment(None))
+                    .environment(CLAUDELOOP)
                 ),
                 max_turns=max_turns,
                 max_dollars=max_dollars,
@@ -2301,6 +2305,33 @@ async def _sweep_loop_snapshots(logger: Logger, projects: ProjectReader) -> None
         logger.warning("loop_snapshot_left", path=str(path), reason=reason)
 
 
+def _sweep_session_registry(logger: Logger) -> None:
+    """Removes the session principals a crashed or killed worker never revoked, once, before
+    this worker claims a job (SP-LOOPS Phase 6, Task 7; R4): the registry entries in the hub's
+    state folder whose expiry -- the run deadline and an hour after the mint -- has passed. The
+    hub refuses them already, so this is disk hygiene; their token files go with their run
+    folders under `_sweep_loop_snapshots`. A live entry is never removed, an unreadable one is
+    named and kept, and a sweep that cannot run is logged and never stops the worker.
+
+    Module-level, as `_sweep_loop_snapshots` is and for the same reason (ADR-0016's last
+    resort, stated)."""
+    from vibey.bootstrap import session_registry_sweep
+
+    try:
+        report = session_registry_sweep().sweep()
+    except (ConfigError, OSError, ValueError) as exc:
+        logger.warning("session_registry_sweep_refused", error=str(exc))
+        return
+    logger.info(
+        "session_registry_sweep",
+        removed=len(report.removed),
+        kept=report.kept,
+        refused=len(report.refused),
+    )
+    for reason in report.refused:
+        logger.warning("session_registry_entry_left", reason=reason)
+
+
 @app.command("worker")
 def worker(
     engines_opt: Annotated[
@@ -2641,6 +2672,8 @@ def worker(
             # SP-LOOPS Phase 4, R10: once, before any job is claimed, and here rather than
             # before the event loop, as every registered project's run deadline is now readable.
             await _sweep_loop_snapshots(StructlogAppLogger(owner="worker"), resources.projects)
+            # SP-LOOPS Phase 6, Task 7: the session principals those crashed runs never revoked.
+            _sweep_session_registry(StructlogAppLogger(owner="worker"))
 
             # Sovereign by default (8.b, #322); an explicit --provider still wins.
             provider = _resolve_provider(provider_opt)
@@ -2654,10 +2687,10 @@ def worker(
             except ConfigError as exc:
                 typer.echo(f"error: {exc}", err=True)
                 raise typer.Exit(EXIT_USAGE) from exc
-            # Every session is told the local SearXNG and how to run `vibey search`; never the
-            # Brave key, so a session's search has no backup (web/local_first.py).
-            search_overlay = web_settings.session_environment()
-            search_overlay[COMMAND_VARIABLE] = vibey_command(sys.argv[0])
+            # A session searches only through the hub, with its own grant, minted for each BUILD
+            # run (SP-LOOPS Phase 6): it is never told a search backend's address or a key. Its
+            # plan names this worker's own `vibey`, absolute, as the command to search with.
+            running_vibey = vibey_command(sys.argv[0])
             typer.echo(web_search_line(web_settings), err=True)
             auto_answers: GateAutoAnswerSweepInterface | None = None
             if (
@@ -2725,7 +2758,7 @@ def worker(
                     claude_process = ClaudeLoopProcess(
                         executor=AsyncSubprocessExecutor(
                             EngineEnvironmentPolicy.from_config(project.config)
-                            .with_overlay(search_overlay)
+                            .with_overlay(SESSION_WEB_OVERLAY.environment(None))
                             .environment(CLAUDELOOP)
                         ),
                         max_turns=max_turns,
@@ -2784,7 +2817,7 @@ def worker(
                 # authenticate.
                 engine_environment = EngineEnvironmentPolicy.from_config(
                     project.config
-                ).with_overlay(search_overlay)
+                ).with_vibey_command(running_vibey)
                 adapters = {
                     engine_id: engine_environment.applied_to(adapter)
                     for engine_id, adapter in adapters.items()

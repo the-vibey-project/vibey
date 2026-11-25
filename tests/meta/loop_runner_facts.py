@@ -44,13 +44,19 @@ _COMMON_TRANSPORTS = f"{_COMMON_MCP}/mcp_transport_factory.py"
 # `plugins: skills-context` is vibey's own code, not a runner's: the BUILD handler appends the
 # vibey-skills context packet to the plan's text, whichever engine then runs it.
 _SKILLS_CONTEXT_SOURCE = "src/vibey/application/build_implement_handler.py"
+# SP-LOOPS Phase 6, Task 6: claudeloop's web search is the `vibey-web` connector vibey's BUILD
+# handler adds to the run's snapshot, and the web-only `vibey mcp --scope web` it starts.
+_BUILD_HANDLER = _SKILLS_CONTEXT_SOURCE
+_WEB_CONNECTOR = "src/vibey/application/web_connector.py"
+_WEB_SCOPE = "src/vibey/cli/mcp.py"
 _SKILLS_CONTEXT_NEEDLE = 'prompt = f"{prompt.rstrip()}\\n\\n{context.markdown.lstrip()}"'
 
 
 def _claudeloop(loop: str) -> tuple[RunnerFact, ...]:
     """claudeloop's facts; claudeloop-local is the same binary on a local profile and takes the
-    same snapshot (SP-LOOPS Phase 4, R11). Neither claims web search (R4), so neither has a fact
-    for it."""
+    same snapshot (SP-LOOPS Phase 4, R11). Both search the hub through the `vibey-web` connector
+    the worker adds to that snapshot (SP-LOOPS Phase 6, Task 6; R3): vibey's code, not the
+    runner's, as the runner imports nothing from vibey."""
     return (
         RunnerFact(loop, "files", _CLAUDE_RUN, '"--capabilities"'),
         RunnerFact(loop, "files", _CLAUDE_RESOURCES, "attachments_dir"),
@@ -63,6 +69,12 @@ def _claudeloop(loop: str) -> tuple[RunnerFact, ...]:
         RunnerFact(loop, "mcp", _CLAUDE_MCP, '"type": "http"'),
         RunnerFact(loop, "skills", _CLAUDE_RUN, '"--capabilities"'),
         RunnerFact(loop, "skills", _CLAUDE_OVERLAY, 'merged["skills"] = self._skills('),
+        RunnerFact(loop, "web_search", _CLAUDE_RUN, '"--capabilities"'),
+        RunnerFact(loop, "web_search", _CLAUDE_MCP, '"type": "stdio"'),
+        RunnerFact(loop, "web_search", _WEB_CONNECTOR, 'WEB_CONNECTOR_NAME: Final = "vibey-web"'),
+        RunnerFact(loop, "web_search", _WEB_CONNECTOR, '"mcp", "--scope", "web", "--token-file"'),
+        RunnerFact(loop, "web_search", _BUILD_HANDLER, "capabilities.grant_web(prepared, web)"),
+        RunnerFact(loop, "web_search", _WEB_SCOPE, "McpCommand.web(os.environ, token_file).run()"),
     )
 
 

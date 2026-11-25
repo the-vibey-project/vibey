@@ -59,6 +59,7 @@ from vibey.application.dto import (
     PreparedCapabilities,
     RunInputs,
     RunSpec,
+    RunWebAccess,
 )
 from vibey.application.interfaces import (
     BudgetSource,
@@ -72,6 +73,7 @@ from vibey.application.interfaces import (
 from vibey.application.interfaces.design import DesignSpecRepository
 from vibey.application.interfaces.loop_capabilities_interface import LoopCapabilitiesInterface
 from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
+from vibey.application.interfaces.run_web_grants_interface import RunWebGrantsInterface
 from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, JobRepository
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import Defer, Failure, Outcome, Park, Success
@@ -143,9 +145,11 @@ class BuildImplementHandler:
         ultra_policy: UltraPolicyInterface = ULTRA_POLICY,
         inputs: RunInputsInterface | None = None,
         capabilities: LoopCapabilitiesInterface | None = None,
+        web: RunWebGrantsInterface | None = None,
     ) -> None:
         self._inputs = inputs
         self._capabilities = capabilities
+        self._web = web
         self._correlation = correlation
         self._ultra_ledger = ultra_ledger
         self._checkpoint = checkpoint
@@ -519,7 +523,22 @@ class BuildImplementHandler:
                     FailureClass.VIBEY,
                     f"the loop capability snapshot could not be written for the run: {failed}",
                 )
+        # The run's web access (SP-LOOPS Phase 6, Task 5): its own web-only grant, minted into
+        # its own folder when a hub is running, or none and why. Opened and closed without an
+        # await, so a cancellation can neither strand a minted grant nor slip the release in
+        # ahead of the revocation; closed first, before the folder is released, on every exit.
+        # A loop whose way to the hub is an MCP server is then given its `vibey-web` connector in
+        # its snapshot, before the snapshot is recorded (Task 6, R3): also without an await.
+        web: RunWebAccess | None = None
         try:
+            if self._web is not None:
+                web = self._web.open(run_id, prepared.folder if prepared is not None else None)
+                if (
+                    capabilities is not None
+                    and prepared is not None
+                    and self._engine.descriptor.web_connector
+                ):
+                    prepared = capabilities.grant_web(prepared, web)
             return await self._session(
                 job,
                 RunSpec(
@@ -529,13 +548,18 @@ class BuildImplementHandler:
                     effort=effort,
                     isolation=IsolationLevel.WORKTREE,
                     capabilities_file=prepared.document if prepared is not None else None,
+                    web=web,
                 ),
                 prepared,
                 ultra=ultra,
             )
         finally:
-            if capabilities is not None and prepared is not None:
-                await asyncio.to_thread(capabilities.release, prepared)
+            try:
+                if self._web is not None and web is not None:
+                    self._web.close(web)
+            finally:
+                if capabilities is not None and prepared is not None:
+                    await asyncio.to_thread(capabilities.release, prepared)
 
     async def _session(
         self,

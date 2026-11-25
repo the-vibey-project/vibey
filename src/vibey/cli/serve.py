@@ -60,6 +60,7 @@ from vibey.application.hub.interfaces.web_tools_service_interface import (
 )
 from vibey.application.hub.web_tools_service import WebToolsService
 from vibey.application.interfaces.remote_command import RemoteCommandServiceInterface
+from vibey.application.session_token_lookup import SessionTokenLookup
 from vibey.bootstrap import AppResources, acp_user_config, build_app, database_url
 from vibey.cli.budget import BUDGET_PRESENTER
 from vibey.cli.errors import EXIT_USAGE
@@ -133,9 +134,12 @@ from vibey.infrastructure.hub.pairing import HubPairing
 from vibey.infrastructure.hub.pairing_ledger import PostgresPairingLedger
 from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.hub.server import HUB_SERVER, LOCAL_NAMES
+from vibey.infrastructure.hub.session_registry import SessionRegistry
+from vibey.infrastructure.hub.session_token_authenticator import SessionTokenAuthenticator
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.hub.tls import HubCertificate, HubTls
 from vibey.infrastructure.hub.web_audit import PostgresWebAudit
+from vibey.infrastructure.logging import StructlogAppLogger
 from vibey.infrastructure.web.guarded_fetch import GuardedPageFetch
 from vibey.infrastructure.web.hub_search import HubWebSearch
 from vibey.infrastructure.web.interfaces.web_settings_loader_interface import (
@@ -362,12 +366,15 @@ class ServeCommand:
         acp_settings: AcpSettingsLoaderInterface = ACP_SETTINGS,
         web_settings: WebToolSettingsLoaderInterface = WEB_SETTINGS,
         user_config: Callable[[], Path] | None = None,
-        web_tools: Callable[[asyncpg.Pool, WebToolSettings], WebToolsServiceInterface] = (
-            lambda pool, settings: WebToolsService(
+        web_tools: Callable[[asyncpg.Pool, WebToolSettings, Path], WebToolsServiceInterface] = (
+            # The hub's state folder holds the session registry the worker writes: the hub
+            # forgets an ended session's counters by it (SP-LOOPS Phase 6, Task 7).
+            lambda pool, settings, state_dir: WebToolsService(
                 search=HubWebSearch(),
                 fetch=GuardedPageFetch(),
                 audit=PostgresWebAudit(pool),
                 settings=settings,
+                session_registry=SessionRegistry(state_dir),
             )
         ),
     ) -> None:
@@ -513,6 +520,15 @@ class ServeCommand:
         if agent is not None:
             # A host LLM's MCP server (ADR-0100): its own key, and only the scopes declared.
             known.append(AgentTokenAuthenticator(agent, settings.agent_scopes))
+        # Last: an engine session's own token (SP-LOOPS Phase 6), found in the registry the
+        # worker writes in this same state folder, and good for web search and fetch alone.
+        known.append(
+            SessionTokenAuthenticator(
+                SessionTokenLookup(SessionRegistry(settings.state_dir)),
+                clock=self._now,
+                logger=StructlogAppLogger(owner="hub"),
+            )
+        )
         authenticator = FirstOf(known)
         async with self._open_app() as resources:
             await live.start()
@@ -549,7 +565,7 @@ class ServeCommand:
                 workflows=self.workflows(os.environ),
                 runs=runs,
                 acp_sessions=self._acp_sessions(resources.ledger._pool, acp),
-                web=self._web_tools(resources.ledger._pool, web),
+                web=self._web_tools(resources.ledger._pool, web, settings.state_dir),
             )
             scheme = "https" if tls is not None else "http"
             typer.echo(f"vibey hub on {scheme}://{self._shown(bound)}:{listen}/api/v1")

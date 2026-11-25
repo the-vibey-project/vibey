@@ -273,6 +273,7 @@ holding `web` and nothing else, with its own budget), accepted by the hub, and g
 session through the overlay that today carries the SearXNG settings -- after which the overlay
 drops `WEBSEARCH_SEARXNG_URL` and the marker. Until then, code a session runs is as able to
 reach SearXNG, and to read the person's files, as it was.
+*(Superseded 2026-11-24 for BUILD sessions: see ADR-0106 and the amendment at the foot.)*
 
 ## What is verified, and what is not
 
@@ -344,7 +345,28 @@ such a run should assert.
 - The Brave backup is reachable only in vibey's own processes -- the hub's web tools among them
   (§9) -- never in an engine session, which still searches SearXNG directly (§9, "What 9b did
   not fix").
+  *(Amended 2026-11-24: a BUILD session now reaches the hub, and so its backup, with a grant of
+  its own; see the amendment at the foot.)*
 - A driver model reached over MCP searches and fetches through the hub with no SearXNG address
   and no key of its own, budgeted, recorded on the ledger when the hub can write the record
   (refused before acting when it cannot), and held to public pages; a query or
   a URL it is steered to write can still carry data out (§9).
+
+## Amendment, 2026-11-24: engine sessions search through the hub (ADR-0106)
+
+SP-LOOPS Phase 6 takes the step §9 recommended, and
+[ADR-0106](0106-engine-sessions-search-through-the-hub-as-a-web-only-principal.md) records it. The
+worker mints each BUILD run's session its own principal, holding `web` and nothing else, revoked
+when the session ends and expiring at the run deadline plus one hour. The session is given the
+hub's loopback address (`VIBEY_HUB_URL`) and the path of its 0600 token file
+(`VIBEY_WEB_TOKEN_FILE`), never the token, and no longer any `WEBSEARCH_*` name, SearXNG address
+or marker. Its `vibey search` and `vibey fetch` ask the hub, never their own process, so a
+session now has the Brave backup, the hub's guarded fetch, a ledger record, and a budget: each
+call counts against the session's own `[web] session_searches` or `session_fetches` and against
+the agent's hourly bucket. claudeloop reaches the same two tools through a `vibey-web` MCP server
+in its run snapshot. A session the worker gives no grant (no hub, no run folder, a mint that
+failed, or not a BUILD run) is told so in `VIBEY_WEB_STATE=none:<reason>` and has no web at all.
+BUILD sessions on claudeloop, claudeloop-local, gptossloop and qwenloop are therefore no longer
+told where SearXNG listens or its marker, and their searches do not ask it directly. §8 still
+holds for code a session runs: as the same person, it can read the record and reach the port.
+The limits ADR-0106 states -- what its environment walk does not cover among them -- apply too.

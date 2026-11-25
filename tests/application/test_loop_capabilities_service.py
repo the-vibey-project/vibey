@@ -37,6 +37,7 @@ from vibey.application.interfaces.loop_capabilities_interface import (
 )
 from vibey.application.loop_capabilities_service import LoopCapabilitiesService
 from vibey.application.loops_bundle_settings import LoopsBundleSettings
+from vibey.application.web_connector import WebConnector
 from vibey.infrastructure.loops.marketplace_store import MarketplaceStore
 from vibey.infrastructure.loops.snapshot_pruner import SnapshotPruner
 from vibey.infrastructure.trusted_table_reader import TomlTrustedTableReader
@@ -99,6 +100,7 @@ class _World:
         run_deadline: timedelta = 4 * HOUR,
         documents: Any = None,
         pruner: Any = None,
+        vibey: str = "/opt/vibey/bin/vibey",
     ) -> None:
         self.tmp = tmp_path
         self.user_config = tmp_path / "config" / "vibey.toml"
@@ -121,6 +123,7 @@ class _World:
             user_config=self.user_config,
             run_deadline=run_deadline,
             logger=self.logger,
+            web_connector=WebConnector(vibey),
         )
 
     def person(self, text: str) -> None:

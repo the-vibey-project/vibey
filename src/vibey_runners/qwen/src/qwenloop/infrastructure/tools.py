@@ -22,6 +22,7 @@ from vibey_runners.common.capabilities.shelf_text import ShelfText
 from vibey_runners.common.capabilities.skill_shelf import MIN_ANSWER_CHARS
 from vibey_runners.common.capabilities.skill_shelf_error import SkillShelfError
 from vibey_runners.common.capabilities.token_estimate import TOKEN_ESTIMATE, TokenEstimate
+from vibey_runners.common.capabilities.web_grant_names import WEB_GRANT_NAMES
 from vibey_runners.common.mcp.mcp_errors import McpToolError, McpUnavailable
 from vibey_runners.common.mcp.mcp_tool import McpTool
 
@@ -155,9 +156,15 @@ class ShellEnvironment:
             "__CF_USER_TEXT_ENCODING",
         }
     )
-    # `WEBSEARCH_` is the non-secret web search setting vibey tells every session (its
-    # `vibey search` reads it); a Brave key is never among them, and FORBIDDEN_* still wins.
-    SYSTEM_PREFIXES: tuple[str, ...] = ("LC_", "WEBSEARCH_")
+    SYSTEM_PREFIXES: tuple[str, ...] = ("LC_",)
+    # The two names a session's `vibey search` and `vibey fetch` need to reach the hub with the
+    # session's own web-only grant (SP-LOOPS Phase 6, R1): the hub's loopback address and the
+    # path of the token file. Neither is a secret -- the token stays in its 0600 file -- so they
+    # pass, exactly these two, although `VIBEY_` and `TOKEN` are forbidden for every other name.
+    # No caller can widen this: `extra` is still checked against the forbidden rule. The pair is
+    # the family's one list (`vibey_runners.common.capabilities.web_grant_names`), the same one a
+    # local MCP server's `env_allow` may keep, which the `vibey-web` connector uses (R3).
+    WEB_NAMES: frozenset[str] = WEB_GRANT_NAMES
     FORBIDDEN_PREFIXES: tuple[str, ...] = ("VIBEY_", "PG")
     FORBIDDEN_MARKERS: tuple[str, ...] = (
         "KEY",
@@ -186,6 +193,8 @@ class ShellEnvironment:
         )
 
     def admits(self, name: str) -> bool:
+        if name in self.WEB_NAMES:
+            return True
         if self.forbids(name):
             return False
         return (

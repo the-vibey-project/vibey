@@ -354,9 +354,12 @@ holds `acp_sessions` and `web` (below).
 
 ```bash
 vibey mcp
+vibey mcp --scope web --token-file PATH
 ```
 
-`vibey mcp` takes no options. It is a thin client of the local hub API (`/api/v1`) and
+Without options it serves a chat client as the agent, as below; `--scope web` serves an engine
+session instead ([below](#scope-web-an-engine-sessions-own-web-tools)). It is a thin client of
+the local hub API (`/api/v1`) and
 authenticates with `<state_dir>/agent.token` as the scoped `agent` principal
 ([`[hub] agent_scopes`](configuration.md#hub): `view`, `answer`, `run`, `acp_sessions` and
 `web` by default — never `spend`, `bump` or `workflows`). `[hub]` is read from your own
@@ -430,6 +433,34 @@ An answer is cut to 60,000 characters with an explicit `...[truncated N chars]` 
 `vibey_fetch` answer longer than that (`[web] max_chars` raised past it) is cut inside its
 marked block instead, so it still parses, says `"truncated": true`, and keeps its closing
 marker. A failed search names the cause and the backends tried, never where SearXNG listens.
+
+<a id="scope-web-an-engine-sessions-own-web-tools"></a>
+### `--scope web`: an engine session's own web tools
+
+```bash
+vibey mcp --scope web --token-file "<run folder>/web-token"
+```
+
+The server a claudeloop or claudeloop-local BUILD run's `vibey-web` connector starts, never a
+chat client's ([ADR-0106](../architecture/decisions/0106-engine-sessions-search-through-the-hub-as-a-web-only-principal.md)).
+It serves exactly `vibey_search` and `vibey_fetch` (as above, the same arguments and answers),
+as the session's own web-only principal: it never reads the agent token, never starts a hub, and
+lists no other tool; any other tool name is unknown and nothing is sent. It reads the hub's
+address from `VIBEY_HUB_URL` and the session's token file from `--token-file`, which stands for
+`VIBEY_WEB_TOKEN_FILE`; the token is read from that file on every call and never kept, and the
+hub must be on this computer's loopback. A process given no web grant
+(`VIBEY_WEB_STATE=none:<reason>`, or none of the session's names) is still served the two tools,
+and each call is answered with why there is no web; nothing is sent.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--scope web` | unset | Serve only the hub's two web tools, as an engine session. `web` is the only scope; any other value is a usage error (exit 2). |
+| `--token-file PATH` | `VIBEY_WEB_TOKEN_FILE` | The session's token file. Only with `--scope web`; alone it is a usage error (exit 2). |
+
+The worker adds the connector to a run's capability snapshot only when the run holds a web grant,
+as a local server started through the scrubbed launcher with exactly `VIBEY_HUB_URL` and
+`VIBEY_WEB_TOKEN_FILE` in its `env_allow`. Each call is charged to the session's own cap and the
+agent's hourly budget ([`[web]`](configuration.md#web)).
 
 ## `vibey acp`
 
@@ -1660,14 +1691,17 @@ and the one checked is the one connected to, every redirect is checked again and
 https down to http, nothing compressed is read, and only text types, within
 [`[web]`](configuration.md#web)'s bounds, host lists and one deadline in all. `[web]` is your own
 `vibey.toml`'s, narrowed by the current folder's; `--max-chars` may lower `[web] max_chars`,
-never raise it. It spends no hub budget and writes no ledger record. A local file path in a query
+never raise it. Run by you, it spends no hub budget and writes no ledger record; inside an engine
+session both commands ask the hub instead, which budgets and records each call
+([what engine sessions are told](#what-engine-sessions-are-told)). A local file path in a query
 is removed before the query leaves the machine.
 
 <a id="local-first-search"></a>
 ### Local first; Brave only as a backup
 
-Every search vibey controls follows one rule, query by query: `vibey search`, the DESIGN
-research stage, and the `web_search` tool of gptossloop and qwenloop (which runs `vibey search`).
+Every search vibey controls follows one rule, query by query: `vibey search` run by you, the
+DESIGN research stage, and the hub's `vibey_search`, which is where an engine session's
+`vibey search` (and so the `web_search` tool of gptossloop and qwenloop) goes.
 
 | When | What happens |
 | --- | --- |
@@ -1675,7 +1709,7 @@ research stage, and the `web_search` tool of gptossloop and qwenloop (which runs
 | Before believing it | Whatever listens there must prove it is a SearXNG: a GET of its `/config` (no query, no secret) must answer SearXNG's own JSON (a string `instance_name` and `version`, lists of `engines` and `categories`), and, when `VIBEY_SEARXNG_INSTANCE` is set, that `instance_name`. HTML, other JSON (including JSON nested too deep to read), another instance name, or an answer from anywhere but `/config` is `something other than SearXNG is listening there`: a failure like any other below, and its search results are never read. A redirect to another host is not followed; one within the same host and port is followed and its answer then refused. A proof is kept by the process for `VIBEY_SEARCH_IDENTITY_TTL` seconds (default `60`) per address: a SearXNG replaced within that window is believed until it ends. A refusal is never kept. |
 | SearXNG answers, even with no results | That is the answer. An empty list from a healthy SearXNG is not a failure, and neither is an empty list while **some** of its engines are unresponsive (a partial answer): Brave is not asked, and the query does not leave the machine. |
 | SearXNG fails, and a Brave key is set | The query goes to **Brave**. SearXNG has failed when it is refused or unreachable, does not finish answering within `VIBEY_SEARCH_TIMEOUT`, answers any HTTP error, answers something that is not JSON (or JSON nested too deep to read) or has no `results` list, fails the identity check, or answers no results while **every** engine it has enabled that answers general queries (category `general`, the one a plain query is asked in, read from its `/config`) is among those it reports unresponsive, or while it has no such engine enabled. Image, video and news engines are never asked by a plain query, so they do not count. The first time in a process, before the query is sent, one line goes to standard error: `local SearXNG unavailable (<reason>); this query went to Brave Search`. Later Brave answers in the same process carry only their marker (`backend: brave`). The line never holds the query or a URL. |
-| SearXNG fails, and no key is set | The search fails (exit 1), saying what was tried and where, and how to fix it: start SearXNG there, or point `VIBEY_SEARXNG_URL` at yours. `vibey doctor` says whether it answers. Inside an engine session the failure says only that the session has no other search and that the person running vibey can start or install the SearXNG; it never mentions a key, since a session can hold none. |
+| SearXNG fails, and no key is set | The search fails (exit 1), saying what was tried and where, and how to fix it: start SearXNG there, or point `VIBEY_SEARXNG_URL` at yours. `vibey doctor` says whether it answers. |
 | Brave fails too | The search fails (exit 1) and names both failures. |
 
 Nothing carries over between queries: the next one asks SearXNG first again. `VIBEY_SEARCH_PROVIDER`
@@ -1701,7 +1735,8 @@ result cannot write your clipboard, retitle your terminal or hide a link.
 The identity check keeps out a program that happens to hold the port first (another app's dev
 server, a container) and, with `VIBEY_SEARXNG_INSTANCE`, another SearXNG. It is not
 authentication: engine sessions run with no network sandbox, as you, so code a session runs can
-bind any unprivileged loopback port, including this one, and can read the instance marker.
+bind any unprivileged loopback port, including this one, and can read the instance marker from
+your record, although no session is told either any more.
 What it serves is still only untrusted text, read as data and never as instructions.
 
 Configuration is your own environment only, never `vibey.toml`: a project's file cannot point
@@ -1713,36 +1748,77 @@ environment wins whenever it names either.
 
 #### What engine sessions are told
 
-`vibey worker` tells every session that can run a command how to search (an appended "Web
-access" note in its plan, naming the absolute path of the running `vibey`), and gives it the
-non-secret settings: `WEBSEARCH_PROVIDER`, `WEBSEARCH_SEARXNG_URL`, `WEBSEARCH_TIMEOUT`,
-`WEBSEARCH_RESULTS`, `WEBSEARCH_IDENTITY_TTL` and, when set, `WEBSEARCH_SEARXNG_INSTANCE`, so a
-session's `vibey search` checks the same identity. It never gives a session the Brave key: no session or gate can be given it
-under any of its names (`VIBEY_BRAVE_API_KEY`, `WEBSEARCH_BRAVE_API_KEY`,
-`BRAVE_SEARCH_API_KEY`), even by a declared environment allow-list, and a project that declared
-one is refused (see [`[engine_environment]`](configuration.md#engine_environment)). So **inside
-a session there is no Brave backup**: a session's `vibey search` is the local SearXNG alone, and
-fails, saying so, while it is down. The backup serves vibey's own processes: `vibey search` run
-by you, and the DESIGN research stage. The worker prints one line on stderr naming the SearXNG
-address and whether a backup is configured, and by which variable (`configured via
-BRAVE_SEARCH_API_KEY`), never the key.
+An engine session never searches or fetches in its own process: it goes through the hub, as a
+principal of its own that holds only the hub's `web` scope
+([ADR-0106](../architecture/decisions/0106-engine-sessions-search-through-the-hub-as-a-web-only-principal.md)).
+When a hub is running on this computer, `vibey worker` mints each BUILD run on claudeloop,
+claudeloop-local, gptossloop or qwenloop that principal, writes its token to
+`<run folder>/web-token` (0600, in the run's own 0700 folder), and gives the session exactly two
+names, never the token:
+
+| Name | Value |
+|---|---|
+| `VIBEY_HUB_URL` | The running hub, on this computer's loopback: `http(s)://127.0.0.1:<port>`, no path. |
+| `VIBEY_WEB_TOKEN_FILE` | The path of the session's token file. |
+
+The run's plan gets a "Web access" note naming the absolute path of the running `vibey`. Inside
+the session, `vibey search` and `vibey fetch` ask the hub with that token, read from its file on
+every call and never kept, and print the hub's answer in the same shape as yours: local SearXNG
+first and Brave only as the hub's backup, the hub's guarded fetch, recorded on the ledger under
+the session's name (`session:<run id>`), never the token. Each call is charged to the session's
+own cap ([`[web] session_searches` and `session_fetches`](configuration.md#web)) and to the
+agent's hourly budget; both are checked, and one call spent, before anything is sent. The token
+reaches the two web routes and nothing else (any other hub route answers 403), and ends when the
+session does (revoked before its run folder is released) or at the run deadline plus one hour,
+whichever is first.
 
 gptossloop and qwenloop also have `web_search` and `web_fetch` as tools of their own, which run
-the same two commands and pass on the backend that answered (and vibey's notice, when there is
-one); every other engine uses the command from its plan.
+the same two commands (their shell keeps exactly the two names above and strips every other
+`VIBEY_*` and token-like name) and pass on the backend that answered and the hub's notice, when
+there is one. claudeloop and claudeloop-local reach the same two tools through the `vibey-web`
+MCP server the worker adds to their run snapshot
+([`vibey mcp --scope web`](#scope-web-an-engine-sessions-own-web-tools)).
 
-**Sessions do not use the hub's web tools yet.** The hub serves search (with its Brave backup)
-and a guarded fetch to MCP clients ([`vibey_search` and
-`vibey_fetch`](#web-tools-vibey_search-and-vibey_fetch)), but an engine session has no channel
-to the hub: the worker reaches PostgreSQL, not the hub, it may run where no hub runs at all, and
-a session is given no hub address and no credential. Routing a session's `vibey search` through
-the hub would mean handing it one, and the only one there is, the agent's, would let a session
-answer gates and start work. So inside a session `vibey search` and `vibey fetch` still work
-directly, as above, and sessions are still told the SearXNG address and marker; a scoped,
-per-session credential is the recorded next step
-([ADR-0102](../architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md),
-"What 9b did not fix"). In your own terminal `vibey search` and `vibey fetch` work directly too, as
-they always have.
+No session is given a SearXNG address, its identity marker, a `WEBSEARCH_*` name, or the Brave
+key: no session or gate can be given the key under any of its names (`VIBEY_BRAVE_API_KEY`,
+`WEBSEARCH_BRAVE_API_KEY`, `BRAVE_SEARCH_API_KEY`), even by a declared environment allow-list,
+and a project that declared one is refused (see
+[`[engine_environment]`](configuration.md#engine_environment)). The same rule refuses every
+`WEBSEARCH_*` name, the SearXNG address's `WEBSEARCH_SEARXNG_URL` among them, and any prefix that
+covers one (`WEBSEARCH_*`): a project's `[engine_environment]` or `[gates] env_allow` that
+declares one is refused when the worker is built, and the error names it and says to give the
+project's own key or address another name in its own environment. Your own `vibey.toml` and
+environment keep their rules: vibey still reads the `WEBSEARCH_*` forms as your own settings.
+The worker prints one line on stderr saying where web search reaches and whether a backup is
+configured, and by which variable (`configured via BRAVE_SEARCH_API_KEY`), never the key.
+
+A session the worker gives no grant is given exactly one name, `VIBEY_WEB_STATE`, saying why; its
+plan says the same, and `vibey search` and `vibey fetch` in it print the reason and exit 78:
+
+| `VIBEY_WEB_STATE` | When |
+|---|---|
+| `none:no-hub` | No hub was running when the run started: "no hub is running; start one with `vibey serve`". |
+| `none:no-run-folder` | The engine takes no capability snapshot, so the run has no folder of its own to hold a token (codexloop). |
+| `none:no-token` | A hub was running, but the session's token could not be made; the worker's log says why. |
+| `none:not-given` | The session is not a BUILD run: the reviewer, a conformance probe, the worker's claudeloop DESIGN and DECOMPOSE provider, or the DESIGN session of `vibey work --provider claudeloop`. |
+| `none`, or a reason this vibey does not know | Never written by this vibey; read as "did not say why". |
+
+How a session's `vibey search` and `vibey fetch` exit, so a loop can tell the refusals apart
+without reading the words (each also prints one line saying why; the token is never printed):
+
+| Exit | Meaning |
+|---|---|
+| `0` | Done. |
+| `1` | The search or page failed, or the hub said so (422, 502, 503, an unreadable answer). |
+| `2` | A query or URL the hub would refuse, refused before anything is sent. |
+| `67` | The hub refused the session's token (401): its web access has ended (the session finished, or the token was revoked or expired). |
+| `69` | No hub answered at `VIBEY_HUB_URL`; a request that timed out is not sent again. |
+| `75` | A `[web]` budget is spent (429): the hub's own words name it, the session's cap or the agent's hourly budget. |
+| `77` | The hub knows the session but does not permit this (403). |
+| `78` | This session has no web: `VIBEY_WEB_STATE` says why; or only one of the two names is set; or `WEBSEARCH_PROVIDER` or `WEBSEARCH_COMMAND` is (names a worker gave sessions before, refused rather than searched in-process); or the hub's address is not loopback, its certificate cannot be read, or the token file is missing, empty, unreadable or not owner-only (named by its path). |
+
+With none of these names set -- you, in your own terminal -- `vibey search` and `vibey fetch`
+work directly, as above, as they always have.
 
 **An engine's own native web search is not vibey's.** claudeloop and codexloop can use their
 provider's server-side web search (Anthropic's, OpenAI's) when their own configuration allows
@@ -1942,9 +2018,9 @@ What the runners' own code shows today:
 
 | Engine | Capabilities shown | `stop` / `wind_down` / `prompt` | Envelope |
 |---|---|---|---|
-| `claudeloop`, `claudeloop-local` | files, pasted text, `claude-plugins`, MCP and skills, all from the run's locked snapshot, which BUILD names with `run --capabilities` (no user, project or local Claude settings load; the snapshot's plugin folders, its skills by `plugin:skill` name, and its MCP servers typed `stdio` for a local server, started through the scrubbed launcher, or `http` for a remote one); no web search: Claude Code's own `WebSearch` and `WebFetch` are off unless you set [`[loops] builtin_web`](configuration.md#loops) to `true`, and on `claudeloop-local` they stay off even then, since a local backend cannot serve them; images and pasted images unknown | `--run-id` and `--cwd` for each; `prompt TEXT --now` | `event_type+payload` |
+| `claudeloop`, `claudeloop-local` | files, pasted text, `claude-plugins`, MCP and skills, all from the run's locked snapshot, which BUILD names with `run --capabilities` (no user, project or local Claude settings load; the snapshot's plugin folders, its skills by `plugin:skill` name, and its MCP servers typed `stdio` for a local server, started through the scrubbed launcher, or `http` for a remote one); web search through the hub: when the worker finds a hub running, BUILD adds the `vibey-web` MCP server ([`vibey mcp --scope web`](#scope-web-an-engine-sessions-own-web-tools)) to the snapshot, serving exactly `vibey_search` and `vibey_fetch` with the run's own web-only grant, and with no hub or no grant the snapshot has no `vibey-web` and the plan and `VIBEY_WEB_STATE` say why; Claude Code's own `WebSearch` and `WebFetch` stay off unless you set [`[loops] builtin_web`](configuration.md#loops) to `true`, and on `claudeloop-local` they stay off even then, since a local backend cannot serve them; images and pasted images unknown | `--run-id` and `--cwd` for each; `prompt TEXT --now` | `event_type+payload` |
 | `codexloop` | files, pasted text, `skills-context`; MCP, skills, web search, images and pasted images unknown (no codexloop code passes an MCP server to Codex) | `--run-id` for each and no `--cwd`: run it in the worktree; `prompt TEXT --now` | `type` |
-| `gptossloop`, `qwenloop` | files, pasted text, `vibey-bundle` from the run's locked snapshot, which BUILD names with `run --capabilities` (skills and plugin commands, listed by name and description in the system prompt within [`[loops] capability_prompt_tokens`](configuration.md#loops) and read through the `skills_list` and `skill_read` tools; MCP through the `mcp_list` and `mcp_call` tools over exactly the snapshot's servers, a local one over stdio started through the scrubbed launcher and a remote one over streamable HTTP, one session per server per run, closed when the run ends, each answer within `[loops] capability_answer_tokens`; the `[loops] instruction_files` from the run's folder; without a snapshot, `mcp_list` and `mcp_call` reach the stdio servers the operator declared and no skill is loaded), web search (the `web_search` and `web_fetch` tools, through `vibey search` and `vibey fetch`, unchanged until SP-LOOPS Phase 6); no images, no pasted images (every message is text) | each takes the run id positionally, with `--cwd`; `prompt RUN_ID TEXT`, which its runner adds to the conversation at the next turn boundary | `type` |
+| `gptossloop`, `qwenloop` | files, pasted text, `vibey-bundle` from the run's locked snapshot, which BUILD names with `run --capabilities` (skills and plugin commands, listed by name and description in the system prompt within [`[loops] capability_prompt_tokens`](configuration.md#loops) and read through the `skills_list` and `skill_read` tools; MCP through the `mcp_list` and `mcp_call` tools over exactly the snapshot's servers, a local one over stdio started through the scrubbed launcher and a remote one over streamable HTTP, one session per server per run, closed when the run ends, each answer within `[loops] capability_answer_tokens`; the `[loops] instruction_files` from the run's folder; without a snapshot, `mcp_list` and `mcp_call` reach the stdio servers the operator declared and no skill is loaded), web search (the `web_search` and `web_fetch` tools, which run `vibey search` and `vibey fetch` and so reach the hub with the run's own web-only grant, or say why the run has none: [what engine sessions are told](#what-engine-sessions-are-told)); no images, no pasted images (every message is text) | each takes the run id positionally, with `--cwd`; `prompt RUN_ID TEXT`, which its runner adds to the conversation at the next turn boundary | `type` |
 
 ## `vibey loops marketplace | plugin | mcp | skills | snapshots`
 
@@ -3036,7 +3112,7 @@ Read from your own environment only: no `vibey.toml` key sets any of them. Every
 | `VIBEY_SEARCH_PROVIDER` | as `VIBEY_SEARXNG_URL` | `searxng`, or unset. `brave` is refused (exit 2): Brave is a backup only; set its key instead. |
 | `VIBEY_SEARCH_TIMEOUT` | as `VIBEY_SEARXNG_URL` | Seconds in all for one search request (connecting, headers and body, however slowly they arrive), and for `doctor`'s SearXNG probe; default `15`. A bad value exits 2 before any engine starts. |
 | `VIBEY_SEARCH_RESULTS` | as `VIBEY_SEARXNG_URL` | How many results a search returns, `1` to `20`; default `5`. |
-| `VIBEY_SEARXNG_INSTANCE` | as `VIBEY_SEARXNG_URL` | Optional. The `instance_name` vibey's own SearXNG answers on `/config`; when set, a SearXNG that names itself anything else is not believed ([local first](#local-first-search)). Your own environment only: a project's `vibey.toml` cannot set it. Passed to sessions as `WEBSEARCH_SEARXNG_INSTANCE`; never printed. |
+| `VIBEY_SEARXNG_INSTANCE` | as `VIBEY_SEARXNG_URL` | Optional. The `instance_name` vibey's own SearXNG answers on `/config`; when set, a SearXNG that names itself anything else is not believed ([local first](#local-first-search)). Your own environment only: a project's `vibey.toml` cannot set it. Never passed to a session; never printed. |
 | `VIBEY_SEARCH_IDENTITY_TTL` | as `VIBEY_SEARXNG_URL` | Seconds a SearXNG that proved its identity is believed before `/config` is asked again; default `60`. A value that is not a finite number above zero exits 2. |
 | `WEBSEARCH_BRAVE_API_KEY` | as `VIBEY_SEARXNG_URL` | Unset. The Brave Search key under the name the runners' web tools use; read when `VIBEY_BRAVE_API_KEY` is not set, and before `BRAVE_SEARCH_API_KEY`. Used by vibey's own processes only: never passed to a session or a gate, not even by a declared allow-list. |
 
@@ -3157,3 +3233,6 @@ prints reaches the model.
 
 The engine CLIs read further variables of their own; see each runner under
 `src/vibey_runners/` and [Other commands in the package](#other-commands-in-the-vibey-engine-package).
+| `VIBEY_HUB_URL` | `search`, `fetch`, `mcp --scope web`, inside an engine session | Set by the worker in a BUILD session that holds its own web grant: the running hub on this computer's loopback. With `VIBEY_WEB_TOKEN_FILE`, the commands ask the hub and never search in their own process ([what engine sessions are told](#what-engine-sessions-are-told)). Not yours to set: no allow-list can pass it to a session. |
+| `VIBEY_WEB_TOKEN_FILE` | as `VIBEY_HUB_URL` | The path of the session's token file, `<run folder>/web-token` (0600), never the token; read on every call. |
+| `VIBEY_WEB_STATE` | as `VIBEY_HUB_URL` | Set by the worker, alone, in a session it gave no web: `none:<reason>` (`no-hub`, `no-run-folder`, `no-token`, `not-given`). The commands then print the reason and exit 78. |

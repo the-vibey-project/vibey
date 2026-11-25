@@ -22,6 +22,7 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
+from vibey.domain.session_web_state import SESSION_WEB_VARIABLES
 from vibey.infrastructure.process.interfaces.child_environment_interface import (
     EnvironmentAllowListInterface,
     ForbiddenEnvironmentInterface,
@@ -44,14 +45,25 @@ class ForbiddenEnvironment:
     """Names no allow-list may admit, whatever it declares.
 
     `prefixes` forbid every name that starts with one; `markers` forbid every name that
-    contains one. Declared by `interfaces/child_environment_interface.py`.
+    contains one. `overlay_grants` names, exactly, the forbidden names vibey itself may still lay
+    over a child's environment (`ChildEnvironment`'s overlay) -- never admitted by any allow-list,
+    so a worker's own copy is never inherited. `web_settings` are the forbidden names, or the
+    start of them, that vibey reads as its own web search settings: refusing an entry that carries
+    one also says what a project does instead. Declared by
+    `interfaces/child_environment_interface.py`.
     """
 
     prefixes: tuple[str, ...] = ()
     markers: tuple[str, ...] = ()
+    overlay_grants: tuple[str, ...] = ()
+    web_settings: tuple[str, ...] = ()
 
     def forbids(self, name: str) -> bool:
         return name.startswith(self.prefixes) or any(marker in name for marker in self.markers)
+
+    def grants_overlay(self, name: str) -> bool:
+        """Whether vibey's own overlay may set `name` although no allow-list may admit it."""
+        return name in self.overlay_grants
 
     def forbids_prefix(self, prefix: str) -> bool:
         """Whether a declared prefix could admit a forbidden name: it lies under a
@@ -62,6 +74,17 @@ class ForbiddenEnvironment:
             or any(marker in prefix for marker in self.markers)
         )
 
+    def refusal(self, entry: str) -> str:
+        """Why a declared `entry` (`NAME`, or `PREFIX*`) is refused, naming it: for one of
+        vibey's own web search settings, also what the project does instead."""
+        reason = f"{entry} can never be passed to a child process"
+        if any(setting in entry for setting in self.web_settings):
+            reason += (
+                "; vibey reads it as its own web search setting, so give the project's own key"
+                " or address another name in its own environment and declare that"
+            )
+        return reason
+
 
 # The credential of vibey's that is read under names outside `VIBEY_*`: the Brave Search key,
 # as `WEBSEARCH_BRAVE_API_KEY` and as `BRAVE_SEARCH_API_KEY` (`infrastructure/web/search.py`),
@@ -69,20 +92,39 @@ class ForbiddenEnvironment:
 # is refused when the worker is built: give its own key another name in its own environment.
 VIBEY_CREDENTIAL_ALIASES = ("BRAVE_SEARCH_API_KEY", "WEBSEARCH_BRAVE_API_KEY")
 
+# The start of the other name vibey reads each of its own web search settings under
+# (`VIBEY_SEARXNG_URL` is also read as `WEBSEARCH_SEARXNG_URL`; `infrastructure/web/search.py`
+# and `searxng_provisioner.OWN_URL_NAMES` read them from the person's own environment). No
+# session or gate holds a SearXNG address or a Brave key (SP-LOOPS Phase 6), so a project that
+# passed any `WEBSEARCH_*` name to its sessions or gates is refused when the worker is built, as
+# the Brave aliases are: give its own key or address another name in its own environment.
+WEB_SEARCH_SETTING_PREFIX = "WEBSEARCH_"
+
+# Every name above, as `ForbiddenEnvironment.web_settings` reads them.
+VIBEY_WEB_SEARCH_SETTINGS = (WEB_SEARCH_SETTING_PREFIX, *VIBEY_CREDENTIAL_ALIASES)
+
 # vibey's own configuration and credentials (`VIBEY_PG_URL`, every `VIBEY_*_TOKEN`,
-# `_PASSWORD` and `_URL`, and the aliases above) and libpq's (`PGPASSWORD`, `PGHOST`,
-# `PGSERVICEFILE`, ...), which reach the same database without ever naming a DSN. Git's
-# plumbing too: a gate that inherits GIT_DIR from a hook operates on the wrong repository (#212).
+# `_PASSWORD` and `_URL`, the aliases above and every `WEBSEARCH_*` setting) and libpq's
+# (`PGPASSWORD`, `PGHOST`, `PGSERVICEFILE`, ...), which reach the same database without ever
+# naming a DSN. Git's plumbing too: a gate that inherits GIT_DIR from a hook operates on the
+# wrong repository (#212).
 GATE_FORBIDDEN = ForbiddenEnvironment(
-    prefixes=("VIBEY_", "PG", "GIT_"), markers=VIBEY_CREDENTIAL_ALIASES
+    prefixes=("VIBEY_", "PG", "GIT_", WEB_SEARCH_SETTING_PREFIX),
+    markers=VIBEY_CREDENTIAL_ALIASES,
+    web_settings=VIBEY_WEB_SEARCH_SETTINGS,
 )
 
 # A model session additionally never receives anything shaped like a database
 # credential, whoever declares it. A gate may be given its project's own test DSN; an
-# engine session may not be given any.
+# engine session may not be given any. The one exception to the `VIBEY_` rule is the worker's
+# own overlay of a session's web access (SP-LOOPS Phase 6, R1): the hub's loopback address and
+# the path of the session's own token file, or that it has none -- never a token, and never by
+# an allow-list.
 MODEL_SESSION_FORBIDDEN = ForbiddenEnvironment(
-    prefixes=("VIBEY_", "PG"),
+    prefixes=("VIBEY_", "PG", WEB_SEARCH_SETTING_PREFIX),
     markers=("DSN", "DATABASE_URL", "PASSWORD", "PASSWD", *VIBEY_CREDENTIAL_ALIASES),
+    overlay_grants=tuple(sorted(SESSION_WEB_VARIABLES)),
+    web_settings=VIBEY_WEB_SEARCH_SETTINGS,
 )
 
 
@@ -112,12 +154,12 @@ class EnvironmentAllowList:
             if not _NAME.fullmatch(name):
                 raise ValueError(f"{where}: {name!r} is not an environment variable name")
             if forbidden.forbids(name):
-                raise ValueError(f"{where}: {name} can never be passed to a child process")
+                raise ValueError(f"{where}: {forbidden.refusal(name)}")
         for prefix in self._prefixes:
             if not _PREFIX_BODY.fullmatch(prefix):
                 raise ValueError(f"{where}: {prefix + '*'!r} is not an environment variable name")
             if forbidden.forbids_prefix(prefix):
-                raise ValueError(f"{where}: {prefix}* can never be passed to a child process")
+                raise ValueError(f"{where}: {forbidden.refusal(prefix + '*')}")
 
     @classmethod
     def parse(
@@ -259,9 +301,9 @@ class ChildEnvironment:
         self._isolate_python_env = isolate_python_env
         self._overlay = dict(overlay or {})
         # The overlay is vibey's own values (a local runner's endpoint), not passthrough -- but
-        # the rule under the allow-list binds it too.
+        # the rule under the allow-list binds it too, save the names it grants an overlay alone.
         for name in self._overlay:
-            if allow.forbidden.forbids(name):
+            if allow.forbidden.forbids(name) and not allow.forbidden.grants_overlay(name):
                 raise ValueError(f"{name} can never be passed to a child process")
         self._source = source
 

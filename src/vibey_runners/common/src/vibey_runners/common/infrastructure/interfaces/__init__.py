@@ -4,5 +4,8 @@
 from vibey_runners.common.infrastructure.interfaces.memory_probe_interface import (
     MemoryProbeInterface,
 )
+from vibey_runners.common.infrastructure.interfaces.vibey_command_interface import (
+    VibeyCommandInterface,
+)
 
-__all__ = ["MemoryProbeInterface"]
+__all__ = ["MemoryProbeInterface", "VibeyCommandInterface"]

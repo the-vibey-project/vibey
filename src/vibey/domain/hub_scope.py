@@ -87,6 +87,11 @@ REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
 }
 """The one scope each action needs. Total over `HubAction`; a test holds it so."""
 
+AGENT_PRINCIPAL: Final = "agent"
+"""The name the hub knows a host LLM's MCP server by (ADR-0100): what it is recorded and budgeted
+under, and whose hourly `[web]` budget every engine session's web call also draws on (SP-LOOPS
+Phase 6, R2)."""
+
 AGENT_DEFAULT_SCOPES: Final[frozenset[HubScope]] = frozenset(
     {HubScope.VIEW, HubScope.ANSWER, HubScope.RUN, HubScope.ACP_SESSIONS, HubScope.WEB}
 )

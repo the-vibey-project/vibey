@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import stat
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,7 @@ from vibey_runners.common.capabilities.bundle import BundleSpec
 from vibey_runners.common.capabilities.interfaces.snapshot_document_store_interface import (
     SnapshotDocumentStoreInterface,
 )
+from vibey_runners.common.capabilities.mcp_server_spec import McpServerSpec
 from vibey_runners.common.capabilities.skill_catalog import SkillCatalog
 from vibey_runners.common.capabilities.snapshot import CapabilitySnapshot
 from vibey_runners.common.capabilities.snapshot_document import (
@@ -26,6 +28,7 @@ from vibey_runners.common.capabilities.snapshot_document_error import SnapshotDo
 from vibey_runners.common.capabilities.snapshot_document_store import (
     DOCUMENT_MAX_BYTES,
     DOCUMENT_NAME,
+    STAGED_NAME,
     SnapshotDocumentStore,
 )
 
@@ -167,3 +170,43 @@ def test_a_document_whose_content_is_refused_says_why(run: Path) -> None:
     path.write_text(text.replace(f'"version":{DOCUMENT_VERSION}', '"version":9'), "utf-8")
     with pytest.raises(SnapshotDocumentError, match="version"):
         SnapshotDocumentStore().read(path)
+
+
+def _with_server(run: Path) -> SnapshotDocument:
+    server = McpServerSpec("vibey-web", "local", ("vibey", "mcp"), None, ("VIBEY_HUB_URL",))
+    return replace(_document(run), mcp_servers=(server,))
+
+
+def test_rewrite_replaces_the_document_whole_and_keeps_it_0600(run: Path) -> None:
+    """SP-LOOPS Phase 6: the run's own MCP connector is added once its grant exists, after the
+    document is first written, by replacing the document in one step."""
+    store = SnapshotDocumentStore()
+    path = _written(run)
+    previous = os.umask(0o377)
+    try:
+        assert store.rewrite(_with_server(run), run) == path
+    finally:
+        os.umask(previous)
+    assert stat.S_IMODE(os.lstat(path).st_mode) == 0o600
+    assert store.read(path) == _with_server(run)
+    assert sorted(entry.name for entry in run.iterdir()) == [DOCUMENT_NAME]
+
+
+def test_rewrite_never_writes_through_a_link_planted_at_its_staged_name(
+    run: Path, tmp_path: Path
+) -> None:
+    path = _written(run)
+    before = path.read_bytes()
+    target = tmp_path / "elsewhere.json"
+    (run / STAGED_NAME).symlink_to(target)
+    with pytest.raises(SnapshotDocumentError, match="cannot be rewritten"):
+        SnapshotDocumentStore().rewrite(_with_server(run), run)
+    assert not target.exists()
+    assert path.read_bytes() == before
+
+
+def test_rewrite_that_cannot_take_the_documents_place_leaves_nothing_staged(run: Path) -> None:
+    (run / DOCUMENT_NAME).mkdir()
+    with pytest.raises(SnapshotDocumentError, match="cannot be rewritten"):
+        SnapshotDocumentStore().rewrite(_with_server(run), run)
+    assert not (run / STAGED_NAME).exists()

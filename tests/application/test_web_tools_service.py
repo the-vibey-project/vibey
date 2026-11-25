@@ -12,7 +12,14 @@ from uuid import UUID
 
 import pytest
 
-from vibey.application.dto import HubPrincipal, WebHit, WebPage, WebSearchAnswer
+from vibey.application.dto import (
+    HubPrincipal,
+    SessionRegistryEntry,
+    SessionRegistryListing,
+    WebHit,
+    WebPage,
+    WebSearchAnswer,
+)
 from vibey.application.hub.interfaces.web_tools_service_interface import (
     WebToolsServiceInterface,
 )
@@ -20,6 +27,7 @@ from vibey.application.hub.web_tools_service import WebToolsService
 from vibey.domain.errors import UnknownProject
 from vibey.domain.hub_scope import HubForbidden, HubScope
 from vibey.domain.ledger import EventKind
+from vibey.domain.session_principal import SessionPrincipal
 from vibey.domain.web_tools import (
     UNTRUSTED_FRAMING,
     WebBudgetExhausted,
@@ -108,6 +116,34 @@ class Clock:
         return self.now
 
 
+class Registry:
+    """The sessions the worker minted and has not revoked, as the hub lists them."""
+
+    def __init__(
+        self,
+        *principals: SessionPrincipal,
+        unreadable: tuple[str, ...] = (),
+        fails: Exception | None = None,
+    ) -> None:
+        self.principals = list(principals)
+        self.unreadable = unreadable
+        self.fails = fails
+
+    def entries(self) -> SessionRegistryListing:
+        if self.fails is not None:
+            raise self.fails
+        return SessionRegistryListing(
+            entries=tuple(
+                SessionRegistryEntry(digest=f"{n:064x}", principal=p)
+                for n, p in enumerate(self.principals)
+            ),
+            unreadable=self.unreadable,
+        )
+
+    def forget(self, digest: str) -> bool:
+        raise AssertionError("the hub never forgets a session; only the worker does")
+
+
 def _service(
     *,
     search: Search | None = None,
@@ -116,12 +152,14 @@ def _service(
     settings: WebToolSettings | None = None,
     clock: Clock | None = None,
     warned: list[str] | None = None,
+    registry: Registry | None = None,
 ) -> WebToolsService:
     return WebToolsService(
         search=search or Search(),
         fetch=fetch or Fetch(),
         audit=audit or Audit(),
         settings=settings or WebToolSettings(),
+        session_registry=registry,
         clock=clock or Clock(),
         now=lambda: NOW,
         nonce=lambda: "n0nce",
@@ -270,6 +308,199 @@ async def test_a_budget_of_zero_turns_the_tool_off() -> None:
             AGENT, "q"
         )
     assert search.asked == []
+
+
+# -- an engine session's two checks and one spend (SP-LOOPS Phase 6, R2) ------------------------
+
+SESSION_A = HubPrincipal("session:aaaa", frozenset({HubScope.WEB}))
+SESSION_B = HubPrincipal("session:bbbb", frozenset({HubScope.WEB}))
+
+
+async def test_a_session_is_held_to_its_own_cap_for_the_whole_session_not_per_hour() -> None:
+    clock, search = Clock(), Search()
+    service = _service(search=search, clock=clock, settings=WebToolSettings(session_searches=2))
+    await service.search(SESSION_A, "one")
+    await service.search(SESSION_A, "two")
+    clock.now += 7_200  # two hours later the session's cap is still spent
+    with pytest.raises(WebBudgetExhausted) as raised:
+        await service.search(SESSION_A, SECRET_QUERY)
+    message = str(raised.value)
+    assert "session:aaaa" in message and "[web] session_searches = 2" in message
+    assert "this session" in message and SECRET_QUERY not in message
+    assert [q for q, _ in search.asked] == ["one", "two"]
+
+
+async def test_a_sessions_fetches_have_a_cap_of_their_own() -> None:
+    service = _service(settings=WebToolSettings(session_fetches=1, session_searches=1))
+    await service.fetch(SESSION_A, "https://example.com/")
+    with pytest.raises(WebBudgetExhausted, match=r"\[web\] session_fetches = 1"):
+        await service.fetch(SESSION_A, "https://example.com/")
+    await service.search(SESSION_A, "q")  # searches are counted apart
+
+
+async def test_one_sessions_spent_cap_never_refuses_another_session() -> None:
+    service = _service(settings=WebToolSettings(session_searches=1))
+    await service.search(SESSION_A, "a")
+    with pytest.raises(WebBudgetExhausted, match="session:aaaa"):
+        await service.search(SESSION_A, "a")
+    await service.search(SESSION_B, "b")
+
+
+async def test_a_session_call_spends_the_agents_hourly_bucket_exactly_once() -> None:
+    """Two checks, one spend: the agent's bucket of three takes a session search (a session
+    fetch's bucket is apart), and the agent's own two searches then fill it."""
+    service = _service(settings=WebToolSettings(searches_per_hour=3, session_searches=10))
+    await service.search(SESSION_A, "s")
+    await service.fetch(SESSION_A, "https://example.com/")
+    await service.search(AGENT, "a1")
+    await service.search(AGENT, "a2")
+    with pytest.raises(WebBudgetExhausted, match=r"agent has used \[web\] searches_per_hour = 3"):
+        await service.search(AGENT, "a3")
+
+
+async def test_a_session_is_refused_when_the_agents_bucket_is_spent_and_spends_neither() -> None:
+    """The session's cap is checked first, then the agent's bucket; a call either check refuses
+    spends neither -- an hour on, the same session still has its whole cap of one."""
+    clock, search = Clock(), Search()
+    service = _service(
+        search=search,
+        clock=clock,
+        settings=WebToolSettings(searches_per_hour=1, session_searches=1),
+    )
+    await service.search(AGENT, "a")
+    with pytest.raises(WebBudgetExhausted) as raised:
+        await service.search(SESSION_A, SECRET_QUERY)
+    message = str(raised.value)
+    assert "agent has used [web] searches_per_hour = 1" in message
+    assert "session:aaaa" in message and SECRET_QUERY not in message
+    clock.now += 3_600
+    await service.search(SESSION_A, "s")
+    with pytest.raises(WebBudgetExhausted, match="session_searches = 1"):
+        await service.search(SESSION_A, "s")
+    assert [q for q, _ in search.asked] == ["a", "s"]
+
+
+async def test_a_session_refused_by_its_own_cap_spends_nothing_of_the_agents_bucket() -> None:
+    service = _service(settings=WebToolSettings(searches_per_hour=2, session_searches=1))
+    await service.search(SESSION_A, "s")
+    for _ in range(3):
+        with pytest.raises(WebBudgetExhausted, match="session_searches"):
+            await service.search(SESSION_A, "s")
+    await service.search(AGENT, "a")  # the bucket of two holds the one session search only
+    with pytest.raises(WebBudgetExhausted, match="searches_per_hour = 2"):
+        await service.search(AGENT, "a")
+
+
+async def test_a_session_cap_of_zero_turns_the_tool_off_for_sessions_only() -> None:
+    search = Search()
+    service = _service(search=search, settings=WebToolSettings(session_searches=0))
+    with pytest.raises(WebBudgetExhausted, match="session_searches = 0"):
+        await service.search(SESSION_A, "q")
+    await service.search(AGENT, "q")
+    assert [q for q, _ in search.asked] == ["q"]
+
+
+async def test_a_name_alone_grants_nothing() -> None:
+    """A principal named like a session but holding no `web` is refused by the scope rule
+    before any budget is asked."""
+    with pytest.raises(HubForbidden, match="web"):
+        await _service().search(HubPrincipal("session:cccc"), "q")
+
+
+# -- an ended session's counters are forgotten (SP-LOOPS Phase 6, Task 7) ------------------------
+#
+# The hub keeps how often each session searched and fetched, in memory. A session that ended --
+# revoked by its worker, or past its expiry -- can never call again (401), so its counters are
+# forgotten the next time any session spends: on-access eviction against the registry the worker
+# writes. In these tests the service is called directly, so an ended session calling again shows
+# that its counter is gone; the hub's authenticator refuses such a call before it gets here.
+
+WALL = NOW.timestamp()
+
+
+def _session(principal: HubPrincipal, expires_at: float = WALL + 3_600) -> SessionPrincipal:
+    return SessionPrincipal(name=principal.name, run_id=UUID(int=1), expires_at=expires_at)
+
+
+async def test_a_revoked_sessions_counters_are_forgotten_when_another_session_spends() -> None:
+    registry, search = Registry(_session(SESSION_A), _session(SESSION_B)), Search()
+    service = _service(
+        search=search, settings=WebToolSettings(session_searches=1), registry=registry
+    )
+    await service.search(SESSION_A, "a")
+    registry.principals = [_session(SESSION_B)]  # A's worker revoked it
+
+    await service.search(SESSION_B, "b")
+
+    await service.search(SESSION_A, "a")  # A's count went with it
+
+    assert [q for q, _ in search.asked] == ["a", "b", "a"]
+
+
+async def test_an_expired_sessions_counters_are_forgotten_though_its_entry_remains() -> None:
+    registry, search = Registry(_session(SESSION_A), _session(SESSION_B)), Search()
+    service = _service(
+        search=search, settings=WebToolSettings(session_searches=1), registry=registry
+    )
+    await service.search(SESSION_A, "a")
+    registry.principals = [_session(SESSION_A, expires_at=WALL), _session(SESSION_B)]
+
+    await service.search(SESSION_B, "b")
+
+    await service.search(SESSION_A, "a")
+
+    assert [q for q, _ in search.asked] == ["a", "b", "a"]
+
+
+async def test_a_live_sessions_counters_are_never_forgotten() -> None:
+    registry = Registry(_session(SESSION_A), _session(SESSION_B))
+    service = _service(settings=WebToolSettings(session_searches=1), registry=registry)
+    await service.search(SESSION_A, "a")
+    await service.search(SESSION_B, "b")
+
+    with pytest.raises(WebBudgetExhausted, match="session:aaaa"):
+        await service.search(SESSION_A, "a")
+
+
+@pytest.mark.parametrize(
+    "registry",
+    [
+        Registry(unreadable=("/hub/sessions/x.json is not JSON",)),
+        Registry(fails=PermissionError("/hub/sessions is open to other accounts")),
+        Registry(fails=ValueError("unreadable")),
+    ],
+    ids=["an-entry-unreadable", "folder-refused", "malformed"],
+)
+async def test_when_the_registry_cannot_say_who_is_live_every_counter_is_kept(
+    registry: Registry,
+) -> None:
+    """An entry that cannot be read may be a live session's: forgetting its counter would give
+    it its whole cap again. So nothing is forgotten, and the call that asked still goes on."""
+    service = _service(settings=WebToolSettings(session_searches=1), registry=registry)
+    await service.search(SESSION_A, "a")
+
+    await service.search(SESSION_B, "b")
+
+    with pytest.raises(WebBudgetExhausted, match="session:aaaa"):
+        await service.search(SESSION_A, "a")
+
+
+async def test_without_a_registry_counters_are_kept_for_the_hubs_lifetime() -> None:
+    service = _service(settings=WebToolSettings(session_searches=1))
+    await service.search(SESSION_A, "a")
+    await service.search(SESSION_B, "b")
+
+    with pytest.raises(WebBudgetExhausted, match="session:aaaa"):
+        await service.search(SESSION_A, "a")
+
+
+async def test_the_agent_and_devices_never_cause_a_registry_read() -> None:
+    """Only a session's spend prunes; the agent's own calls read nothing from disk."""
+    registry = Registry(fails=AssertionError("the registry was read"))
+    service = _service(registry=registry)
+
+    await service.search(AGENT, "a")
+    await service.fetch(OTHER, "https://example.com/")
 
 
 # -- the ledger comes first ---------------------------------------------------------------------

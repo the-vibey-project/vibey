@@ -26,7 +26,9 @@ This module decides, with no I/O, everything about that which can be decided wit
 - **The person's hosts** (`host_problem`): `[web] deny_hosts` always wins; with `allow_hosts`
   set, only those hosts (and their subdomains) are fetched.
 - **Budgets** (`budget_wait`): each principal may search `searches_per_hour` times and fetch
-  `fetches_per_hour` times in any rolling hour.
+  `fetches_per_hour` times in any rolling hour. An engine session's principal is held instead to
+  `session_searches` and `session_fetches` for its whole session, and each of its calls also
+  draws on the agent's hourly budget (SP-LOOPS Phase 6, R2).
 - **The audit record** (`audit`): who, which tool, the outcome, the backend, and for a fetch the
   hosts it reached -- never the query, never a URL.
 
@@ -60,6 +62,8 @@ HOUR_SECONDS: Final = 3600.0
 
 DEFAULT_SEARCHES_PER_HOUR: Final = 60
 DEFAULT_FETCHES_PER_HOUR: Final = 30
+DEFAULT_SESSION_SEARCHES: Final = 30
+DEFAULT_SESSION_FETCHES: Final = 15
 DEFAULT_MAX_BYTES: Final = 1_000_000
 DEFAULT_MAX_CHARS: Final = 20_000
 DEFAULT_TIMEOUT_SECONDS: Final = 15.0
@@ -124,6 +128,8 @@ type WebOutcome = Literal["ok", "failed", "refused"]
 _BOUNDS: Final[Mapping[str, tuple[float, float]]] = {
     "searches_per_hour": (0, 100_000),
     "fetches_per_hour": (0, 100_000),
+    "session_searches": (0, 100_000),
+    "session_fetches": (0, 100_000),
     "max_bytes": (1, 50_000_000),
     "max_chars": (100, 1_000_000),
     "max_redirects": (0, 10),
@@ -197,6 +203,12 @@ class WebToolSettings:
 
     searches_per_hour: int = DEFAULT_SEARCHES_PER_HOUR
     fetches_per_hour: int = DEFAULT_FETCHES_PER_HOUR
+    session_searches: int = DEFAULT_SESSION_SEARCHES
+    """How many searches one engine session may make in all, for as long as it runs (SP-LOOPS
+    Phase 6, R2): a cap per session, not per hour. Each also draws on the agent's
+    `searches_per_hour`."""
+    session_fetches: int = DEFAULT_SESSION_FETCHES
+    """The same for fetches; each also draws on the agent's `fetches_per_hour`."""
     allow_hosts: tuple[str, ...] | None = None
     """None: any public host. A list, even an empty one: only those hosts and their subdomains."""
     deny_hosts: tuple[str, ...] = ()
@@ -425,6 +437,8 @@ class WebToolPolicy:
 LOWER_ONLY: Final = (
     "searches_per_hour",
     "fetches_per_hour",
+    "session_searches",
+    "session_fetches",
     "max_bytes",
     "max_chars",
     "timeout_seconds",

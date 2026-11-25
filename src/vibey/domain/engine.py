@@ -314,6 +314,11 @@ class EngineDescriptor:
     # snapshot folder. None for a runner that takes no document; BUILD then gives it no snapshot
     # and records none. Checked against the runner's own `--help` by conformance.
     capabilities_flag: str | None = None
+    # Whether a BUILD run that holds a web grant is given the `vibey-web` MCP connector in its
+    # capability snapshot (SP-LOOPS Phase 6, Task 6; R3): true for a loop whose only way to the
+    # hub's web tools is an MCP server (claudeloop, whose own web tools stay disallowed); false
+    # for one with web tools of its own (the local runner runs `vibey search`) or no snapshot.
+    web_connector: bool = False
     # Extra arguments for `<binary> doctor` in preflight. claudeloop-local
     # passes its profile, so the health check probes the local backend the
     # run will use rather than the Anthropic login a profile never touches.
