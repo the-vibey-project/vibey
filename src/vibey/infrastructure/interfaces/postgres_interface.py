@@ -17,6 +17,10 @@ class PostgresLocalServiceInterface(Protocol):
         """Return the local PostgreSQL installation and readiness state."""
         ...
 
+    def tool(self, name: str) -> str | None:
+        """Where a PostgreSQL client tool is, Homebrew's versioned formula first, or None."""
+        ...
+
     def package_manager(self) -> str | None:
         """The package manager `install` would use, or None; runs nothing."""
         ...

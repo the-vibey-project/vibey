@@ -20,6 +20,7 @@ import typer
 from vibey.cli.interfaces.models_interface import ModelsCommandInterface, ModelsPresenterInterface
 from vibey.domain.interfaces.model_families_interface import ModelFamiliesInterface
 from vibey.domain.model_families import MODEL_FAMILY_CATALOG
+from vibey.domain.sovereign_model import SOVEREIGN_CATALOG
 from vibey.infrastructure.interfaces.ollama_models_interface import OllamaModelsInterface
 from vibey.infrastructure.ollama_models import DEFAULT_OLLAMA_URL, OllamaModels, OllamaUnavailable
 
@@ -114,6 +115,12 @@ class ModelsCommand:
         self._presenter = presenter or ModelsPresenter()
         self._client_for = client_for
         self._environ = environ
+
+    def default_tag(self) -> str:
+        """`VIBEY_OLLAMA_MODEL`, then `VIBEY_SOVEREIGN_MODEL`'s build, then the sovereign
+        default: the one tag `vibey install --model` pulls (ADR-0099)."""
+        environ = os.environ if self._environ is None else self._environ
+        return SOVEREIGN_CATALOG.from_environment(environ)
 
     def run(self, *, as_json: bool) -> None:
         report = self.report()

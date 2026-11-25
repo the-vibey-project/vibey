@@ -58,3 +58,56 @@ def test_nothing_ever_uninstalls_vibey_engine() -> None:
     for text in (UNINSTALL, INSTALL):
         assert not re.search(r"uninstall[^\n]*vibey-engine", text)
         assert not re.search(r"uninstall[^\n]*\$ENGINE", text)
+
+
+FULL_STEP = re.compile(
+    r'^\s*(?:capture_)?step (\S+) "[^"]*" vibey (\S+)((?: --?[a-z][a-z-]*)*)', re.MULTILINE
+)
+
+
+def test_every_full_step_is_a_command_and_option_vibey_ships() -> None:
+    """`--full` runs vibey's own commands, never a reimplementation, so each one it names
+    must exist with each option it passes: a renamed command or flag fails here, not on a
+    person's fresh machine."""
+    import typer.main
+
+    from vibey.cli.main import app
+
+    cli = typer.main.get_command(app)
+    steps = FULL_STEP.findall(INSTALL)
+    assert [name for name, _, _ in steps] == ["postgres", "database", "migrate", "model", "connect"]
+    for _, command, options in steps:
+        shipped = cli.commands[command]  # type: ignore[attr-defined]
+        known = {opt for param in shipped.params for opt in param.opts}
+        assert set(options.split()) <= known, (command, options)
+    connect = cli.commands["connect"]  # type: ignore[attr-defined]
+    assert "--client" in {opt for param in connect.params for opt in param.opts}
+    models = cli.commands["models"]  # type: ignore[attr-defined]
+    assert "vibey models --default-tag" in INSTALL
+    assert "--default-tag" in {opt for param in models.params for opt in param.opts}
+
+
+def test_the_line_full_reads_is_the_line_vibey_install_database_prints() -> None:
+    """The script keeps the `export VIBEY_PG_URL=...` line `vibey install --database` prints;
+    that command printing it differently would leave the doctor and the closing lines without it."""
+    from vibey.cli import local_install
+
+    printed = (REPO / "src/vibey/cli/local_install.py").read_text(encoding="utf-8")
+    assert 'f"  export VIBEY_PG_URL={names.app_dsn}"' in printed, local_install.__file__
+    assert "s/^ *\\(export VIBEY_PG_URL=[^ ]*\\)$/\\1/p" in INSTALL
+
+
+def test_the_engine_is_installed_with_the_extras_the_hub_needs() -> None:
+    """`vibey serve`, `vibey hub` and the hub `vibey mcp` starts import FastAPI, which is only
+    in vibey-engine's `hub` extra; krypton-app asks for the same extra."""
+    engine = tomllib.loads((REPO / "pyproject.toml").read_text())
+    assert "hub" in engine["project"]["optional-dependencies"]
+    assert 'EXTRAS="${VIBEY_ENGINE_EXTRAS-hub}"' in INSTALL
+    apps = tomllib.loads((REPO / "clients/krypton-app/pyproject.toml").read_text())
+    assert f"{engine['project']['name']}[hub]" in apps["project"]["dependencies"]
+
+
+def test_full_reads_the_owner_dsn_vibey_migrate_reads() -> None:
+    from vibey.infrastructure.db.ledger_guard import DatabaseEndpoints
+
+    assert f"${{{DatabaseEndpoints.MIGRATE_ENV}:-}}" in INSTALL

@@ -31,3 +31,7 @@ class ModelsCommandInterface(Protocol):
     def report(self) -> ModelsReport:
         """The report `run` prints."""
         ...
+
+    def default_tag(self) -> str:
+        """The tag the local loop runs here, after the person's overrides (ADR-0099)."""
+        ...
